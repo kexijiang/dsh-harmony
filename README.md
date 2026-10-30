@@ -6,13 +6,18 @@
 
 - 侧栏投屏与 Windows 悬浮窗相互切换；悬浮窗可置顶、缩放和拖动。
 - 跟随 NEXT 深浅色与主题配色；设置使用不透明抽屉，连接详情使用独立对话框。
-- 投屏、应用、文件、媒体、设备信息分开显示，设备型号、系统和序列号放在“设备信息”页。
-- 保留 Piora 的设备管理、截图、录屏、应用、文件、只读数据库、日志、场景及诊断功能。
+- 主导航保留投屏、文件、媒体、设备信息，设备型号、系统和序列号放在“设备信息”页。
+- 应用、数据库、日志、终端、自动化和语音验证页面暂不开放；相关实现保留，完善后再恢复入口。
+- 保留 Piora 的设备管理、截图、录屏、文件与诊断能力，以及 Agent 操作接口。
 - `harmony_control` 为 Agent 提供设备枚举、页面观察、点击、滑动、文字输入等操作；截图返回 DSH 图片附件。
+- “更多 → 界面结构”提供 UI 检查器：获取截图与组件树，点击画面定位组件、查看属性，支持搜索、父组件选择和重叠组件切换。检查快照时不会点击手机。
+- “文件”采用目录树表格，按需展开，显示真实权限、修改时间和大小；右键或“属性 / 操作”可预览文本、上传、下载、新建、重命名、复制、移动及删除。支持普通目录与可调试应用沙箱；设备授权及原有写入范围仍然生效。
 
 ![浅色面板](assets/panel-light.png)
 ![深色面板](assets/panel-dark.png)
 ![设置抽屉](assets/settings-light.png)
+![设备文件浏览器](assets/files-light.png)
+![UI 检查器](assets/inspector-light.png)
 
 截图使用测试数据；不会包含真实设备或用户文件。
 
@@ -49,6 +54,8 @@ https://github.com/kexijiang/dsh-harmony/releases/latest/download/dsh-plugin-har
 
 其他操作先通过 `help` 获取准确参数。任务结束或取消时释放设备控制租约，面板与 Agent 共用设备管理器。模型由 DSH 提供，不读取 Piora 模型凭据。
 
+`observe_page` 支持分页读取页面节点和祖先信息。检查器显示的是设备实际暴露的组件，不能保证取得自绘画面的内部元素；截图与结构按顺序获取，页面变化后需要刷新。快照引用属于对应观察版本，Agent 操作继续执行原有版本及状态校验。
+
 ## 配置
 
 数据默认存储在 `%USERPROFILE%\.dsh\harmony`，跟随宿主 `DSH_HOME`，不改动 Piora 数据。可在 Desktop profile 的 `cordis.patch.yml` 追加配置：
@@ -70,6 +77,7 @@ https://github.com/kexijiang/dsh-harmony/releases/latest/download/dsh-plugin-har
 npm ci
 npm run check
 node scripts/check-redesign.mjs
+node scripts/check-inspector.mjs
 npm run bundle
 npm run install:dsh
 ```

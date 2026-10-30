@@ -1,0 +1,263 @@
+.root {
+  color: var(--text);
+  font-size: 12px;
+  min-width: 0;
+}
+.scope,
+.toolbar,
+.pathbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.scope {
+  justify-content: space-between;
+}
+.scope strong {
+  font-size: 13px;
+}
+.root.root button {
+  margin: 0;
+  min-height: 28px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 8px;
+}
+.root button:hover {
+  background: var(--bg-hover);
+}
+.root input,
+.root select {
+  padding: 5px 8px;
+  min-width: 0;
+}
+.root .scope select {
+  width: auto;
+  margin: 0;
+}
+.root .toolbar input:not([type="checkbox"]),
+.root .pathbar input:not([type="checkbox"]) {
+  margin: 0;
+}
+.root .toolbar label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+}
+.root .name button {
+  min-height: 20px;
+  height: 20px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: none;
+}
+.toolbar > input {
+  flex: 1;
+  width: 140px;
+}
+.toolbar label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+.pathbar > input {
+  flex: 1;
+  min-width: 90px;
+}
+.tree {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: auto;
+  min-height: 320px;
+  max-height: calc(100dvh - 300px);
+  background: var(--bg);
+}
+.head,
+.row {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) 96px 152px 90px;
+  min-width: 560px;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px;
+  font-size: 11px;
+  min-height: 28px;
+}
+.head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--bg-panel);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  height: 30px;
+}
+.row[aria-selected="true"] {
+  background: var(--bg-selected);
+}
+.row:hover {
+  background: var(--bg-hover);
+}
+.row:focus-visible {
+  outline: 1px solid var(--accent);
+  outline-offset: -1px;
+}
+.row > span:last-child {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.row > span {
+  white-space: nowrap;
+}
+.name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow: hidden;
+}
+.name > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.name button {
+  padding: 0;
+  border: 0;
+  width: 16px;
+  flex: 0 0 16px;
+  background: none;
+}
+.spacer {
+  width: 16px;
+  flex: 0 0 16px;
+}
+.name svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+.status {
+  padding: 8px;
+  color: var(--text-muted);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.status button {
+  margin-left: 8px;
+}
+.loadMore {
+  margin: 4px 12px;
+}
+.footer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  color: var(--text-muted);
+  font-size: 11px;
+  padding: 8px 0;
+}
+.footer > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.hint {
+  color: var(--text-muted);
+}
+.menu {
+  position: fixed;
+  z-index: 3500;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 30px #0003;
+  padding: 5px;
+  width: 195px;
+  max-height: calc(100vh - 12px);
+  overflow: auto;
+}
+.menu button {
+  display: block;
+  text-align: left;
+  border: 0;
+  width: 100%;
+  padding: 6px 9px;
+}
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 3400;
+  background: var(--overlay-scrim);
+  display: flex;
+  justify-content: flex-end;
+}
+.sheet {
+  background: var(--bg);
+  color: var(--text);
+  border-left: 1px solid var(--border);
+  box-shadow: -8px 0 40px #0002;
+  width: min(460px, 100%);
+  padding: 18px;
+  overflow: auto;
+}
+.sheet header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.sheet header strong {
+  font-size: 14px;
+}
+.sheet h3 {
+  font-size: 13px;
+  margin: 18px 0 10px;
+}
+.sheet label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 12px 0;
+}
+.sheet input {
+  width: 100%;
+}
+.selectedPath {
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+.sheet dl > div {
+  display: grid;
+  grid-template-columns: 70px 1fr;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+.sheet dt {
+  color: var(--text-muted);
+}
+.sheet dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.buttons {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+.sheet pre {
+  font-size: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--bg-panel);
+  padding: 12px;
+  border-radius: 6px;
+  max-height: 50vh;
+  overflow: auto;
+}

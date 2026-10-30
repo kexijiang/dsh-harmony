@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { HarmonyDoctorReport } from "@/lib/harmony/contracts/capabilities";
 import type { ScenarioExecution } from "@/lib/harmony/scenario/execution-store";
 import { ApplicationPicker } from "./ApplicationPicker";
-import { DeviceFiles } from "./DeviceFiles";
+import { DeviceExplorer as DeviceFiles } from "./DeviceExplorer";
 import { SqliteViewer } from "./SqliteViewer";
 import { DeviceConsole } from "./DeviceConsole";
 import { TransferJobs } from "./TransferJobs";

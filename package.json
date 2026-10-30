@@ -1,6 +1,6 @@
 {
   "name": "dsh-plugin-harmony",
-  "version": "0.3.3",
+  "version": "0.4.1",
   "description": "DSH NEXT 鸿蒙设备工作台：Better Sidebar Tab、独立悬浮投屏、主题同步与 Agent 设备操作",
   "repository": {
     "type": "git",

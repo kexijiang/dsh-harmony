@@ -22,6 +22,7 @@ export class HarmonyRequestError extends Error {
   }
 
   messageFor(chinese: boolean): string {
+    if (this.code === "DEVICE_OFFLINE") return chinese ? "设备离线或尚未授权。请连接手机并确认调试授权后重试。" : "Device offline or unauthorized. Connect it and confirm debugging authorization, then retry.";
     if (this.reason === "debug-video-sdk-missing") return chinese
       ? "未找到原生投屏运行时。请修复或更新 Piora 后重新连接；正常安装无需额外安装 DevEco Studio。"
       : "The native video runtime is missing. Repair or update Piora and reconnect; a normal installation does not require DevEco Studio.";

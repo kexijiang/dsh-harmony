@@ -858,7 +858,7 @@ export function DeviceFiles({ serial, chinese, cwd, canControl, ensureControl, o
       <aside ref={detailsRef} className={styles.fileDetails} data-path={selected?.path} aria-label={copy("选中项详情", "Selected item details")}>
     {!selected ? <div className={styles.fileDetailsEmpty}>{copy("选择文件或文件夹，查看预览与操作。", "Select a file or folder to see its preview and actions.")}</div> : null}
     {selected?.kind === "file" ? <fieldset ref={inspectorRef} className={styles.fileInspector}><legend>{copy("文件预览与下载", "File preview and download")}: {selected.name}</legend>
-      {matchedDatabaseId ? <button type="button" onClick={() => void openSelectedDatabase()}>{copy("在数据库工作台打开", "Open in database workbench")}</button> : null}
+      {matchedDatabaseId && onDatabaseOpen ? <button type="button" onClick={() => void openSelectedDatabase()}>{copy("在数据库工作台打开", "Open in database workbench")}</button> : null}
       {selectedImage ? <div className={styles.fileImagePreview}>
         <div className={styles.fileImageControls}>
           <button type="button" disabled={!imageSize || (imageZoom ?? 100) <= 25} onClick={() => setImageZoom(Math.max(25, (imageZoom ?? 100) - 25))}>{copy("缩小", "Zoom out")}</button>

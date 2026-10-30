@@ -85,7 +85,7 @@ export function parseDeviceFileListing(output: Buffer, parent: string): { files:
     const kind = kindText === "directory" ? "directory" : kindText === "regular file" || kindText === "regular empty file" ? "file" : kindText.includes("symbolic link") ? "symlink" : "other";
     const size = /^\d+$/.test(sizeText) ? Number(sizeText) : undefined;
     const modifiedAt = /^\d+$/.test(modifiedText) ? Number(modifiedText) * 1000 : undefined;
-    files.push({ path, name, kind, size: Number.isSafeInteger(size) ? size : undefined,
+    files.push({ path: posix.normalize(path), name, kind, size: Number.isSafeInteger(size) ? size : undefined,
       modifiedAt: Number.isSafeInteger(modifiedAt) ? modifiedAt : undefined,
       mode: /^[0-7]{3,4}$/.test(mode) ? mode : undefined });
   }

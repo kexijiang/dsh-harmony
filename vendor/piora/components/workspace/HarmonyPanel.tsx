@@ -23,6 +23,10 @@ const WorkbenchTools = dynamic(() => import("./harmony/WorkbenchTools").then(mod
 import { MediaHistory } from "./harmony/MediaHistory";
 import { TcpDeviceConnection } from "./harmony/TcpDeviceConnection";
 import styles from "./HarmonyPanel.module.css";
+import { UiInspector } from "./harmony/UiInspector";
+
+// Keep unfinished pages implemented, but unavailable through desktop navigation.
+const hiddenWorkbenchTabs = new Set(["apps", "databases", "logs", "commands", "scenarios", "voice"]);
 
 type RuntimeProfile = "normal" | "device-control";
 type HarmonyDevice = {
@@ -325,6 +329,7 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
     load(); const timer = setInterval(load, 3000); return () => { controller.abort(); clearInterval(timer); };
   }, [active, selectedSerial]);
   const changeToolTab = (tab: typeof toolTab) => {
+    if (hiddenWorkbenchTabs.has(tab)) return;
     if (drawerBodyRef.current) drawerScrollPositions.current[`${selectedSerial}:${toolTab}`] = drawerBodyRef.current.scrollTop;
     setToolTab(tab); setToolsVisited(true); setMoreOpen(false);
     if (!["mirror", "overview", "apps", "files", "media"].includes(tab)) setExtraTabs(current => current.includes(tab) ? current : [...current, tab]);
@@ -683,9 +688,9 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
     </section></HarmonySettingsSurface> : null}
 
     <nav className={styles.workbenchTabs} role="tablist" aria-label={copy("设备功能", "Device functions")}>
-      {(["mirror", "apps", "files", "media", "overview", ...extraTabs] as Array<typeof toolTab>).map(tab => <div key={tab} className={styles.tabItem}>
+      {(["mirror", "apps", "files", "media", "overview", ...extraTabs] as Array<typeof toolTab>).filter(tab => !hiddenWorkbenchTabs.has(tab)).map(tab => <div key={tab} className={styles.tabItem}>
         <button id={`${drawerId}-${tab}`} role="tab" aria-controls={drawerId} type="button" aria-selected={toolTab === tab} tabIndex={toolTab === tab ? 0 : -1} onKeyDown={event => {
-          const tabs = ["mirror", "apps", "files", "media", "overview", ...extraTabs] as Array<typeof toolTab>;
+          const tabs = (["mirror", "apps", "files", "media", "overview", ...extraTabs] as Array<typeof toolTab>).filter(tab => !hiddenWorkbenchTabs.has(tab));
           const index = tabs.indexOf(tab);
           const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
           if (next >= 0) { event.preventDefault(); changeToolTab(tabs[next]); document.getElementById(`${drawerId}-${tabs[next]}`)?.focus(); }
@@ -694,7 +699,7 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       </div>)}
       <div className={styles.moreMenu}><button type="button" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>{copy("更多", "More")} ▾</button>
         {moreOpen ? <div className={styles.morePopover}>
-          {([[copy("开发工具", "Development"), ["databases", "commands", "logs", "tree"]], [copy("自动化", "Automation"), ["scenarios", "voice"]], [copy("维护", "Maintenance"), ["diagnostics", "inputs"]]] as Array<[string, Array<typeof toolTab>]>).map(([label, tabs]) => <section key={label}><strong>{label}</strong>{tabs.map(tab => <button key={tab} type="button" onClick={() => changeToolTab(tab)}>{({ databases: copy("数据库", "Databases"), commands: copy("终端", "Terminal"), logs: copy("日志", "Logs"), tree: copy("界面结构", "UI tree"), scenarios: copy("自动化场景", "Scenarios"), voice: copy("语音验证", "Voice"), diagnostics: copy("诊断", "Diagnostics"), inputs: copy("校准", "Calibration") } as Record<string, string>)[tab]}</button>)}</section>)}
+          {([[copy("开发工具", "Development"), ["databases", "commands", "logs", "tree"]], [copy("自动化", "Automation"), ["scenarios", "voice"]], [copy("维护", "Maintenance"), ["diagnostics", "inputs"]]] as Array<[string, Array<typeof toolTab>]>).filter(([, tabs]) => tabs.some(tab => !hiddenWorkbenchTabs.has(tab))).map(([label, tabs]) => <section key={label}><strong>{label}</strong>{tabs.filter(tab => !hiddenWorkbenchTabs.has(tab)).map(tab => <button key={tab} type="button" onClick={() => changeToolTab(tab)}>{({ databases: copy("数据库", "Databases"), commands: copy("终端", "Terminal"), logs: copy("日志", "Logs"), tree: copy("界面结构", "UI tree"), scenarios: copy("自动化场景", "Scenarios"), voice: copy("语音验证", "Voice"), diagnostics: copy("诊断", "Diagnostics"), inputs: copy("校准", "Calibration") } as Record<string, string>)[tab]}</button>)}</section>)}
         </div> : null}
       </div>
       <button type="button" className={styles.tasksButton} onClick={() => changeToolTab("history")}>{copy("任务", "Tasks")}{tasksCount ? ` ${tasksCount}` : ""}</button>
@@ -720,12 +725,13 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
           }}>{copy("放弃草稿", "Discard draft")}</button></section>)}
           <MediaHistory serial={selectedSerial} refreshKey={media.artifact?.filename} chinese={chinese} />
         </> : null}
-          {toolsVisited ? <WorkbenchTools key={selectedSerial} geometryId={geometryId} tab={toolTab === "mirror" ? "overview" : toolTab} serial={selectedSerial} active={active && toolTab !== "mirror"} chinese={chinese} canControl={canControl} ensureControl={ensureControl} onControlHandoff={clearControl} cwd={cwd} ownerId={ownerId} initialDatabaseId={databaseSelection} onOpenDatabase={id => { setDatabaseSelection(id); changeToolTab("databases"); }} onOpenFiles={() => changeToolTab("files")} onShowTasks={() => changeToolTab("history")} onOpenLocalTerminal={onOpenLocalTerminal} onCleanupConfirmed={async () => { setError(null); await refresh(); }} /> : null}
+          {toolsVisited ? <WorkbenchTools key={selectedSerial} geometryId={geometryId} tab={toolTab === "mirror" ? "overview" : toolTab} serial={selectedSerial} active={active && toolTab !== "mirror"} chinese={chinese} canControl={canControl} ensureControl={ensureControl} onControlHandoff={clearControl} cwd={cwd} ownerId={ownerId} initialDatabaseId={databaseSelection} onOpenDatabase={hiddenWorkbenchTabs.has("databases") ? undefined : id => { setDatabaseSelection(id); changeToolTab("databases"); }} onOpenFiles={() => changeToolTab("files")} onShowTasks={() => changeToolTab("history")} onOpenLocalTerminal={onOpenLocalTerminal} onCleanupConfirmed={async () => { setError(null); await refresh(); }} /> : null}
           {toolTab === "logs" ? <HarmonyLogViewer active={active} serial={selectedSerial} online={Boolean(selectedOnline)} copy={copy} /> : null}
-          {toolTab === "diagnostics" || toolTab === "tree" ? <div className={styles.moreBody}>
+          {toolTab === "tree" ? <UiInspector key={selectedSerial} serial={selectedSerial} online={Boolean(selectedOnline)} active={active} chinese={chinese} /> : null}
+          {toolTab === "diagnostics" ? <div className={styles.moreBody}>
             <button type="button" disabled={!canControl || busy} onClick={() => void initializeMirror()}>{copy("初始化投屏服务", "Initialize video service")}</button>
             <button type="button" disabled={!selectedOnline || busy} onClick={() => void openSelectedMirror()}>{copy("打开投屏", "Open mirror")}</button>
-            <button type="button" disabled={!selectedOnline || busy || !selected?.capabilities.uiTree} onClick={() => void run(() => jsonRequest<{ snapshot: unknown }>(`/api/harmony/tree?serial=${encodeURIComponent(selectedSerial)}`), payload => setTree(payload.snapshot))}>{copy("读取界面结构", "Read interface structure")}</button>
+            <button type="button" disabled={!selectedOnline || busy || !selected?.capabilities.uiTree} onClick={() => changeToolTab("tree")}>{copy("读取界面结构", "Read interface structure")}</button>
             <details className={styles.diagnostics}><summary>{copy("开发者信息", "Developer details")}</summary><pre>{JSON.stringify({ selected, holder, snapshot, diagnostics, tree }, null, 2)}</pre></details>
             <button className={styles.stopButton} type="button" disabled={busy} onClick={() => { clearControl(); void run(() => jsonRequest("/api/harmony/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "emergency_stop", reason: "desktop-global-stop" }) })); }}>{copy("停止所有设备操作", "Stop all devices")}</button>
           </div> : null}

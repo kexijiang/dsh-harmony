@@ -12,6 +12,9 @@
 - components/workspace/harmony/MirrorWindow.tsx：接入插件提供的原生悬浮窗桥，增加置顶、缩放及停靠按钮；修复标题栏的主题变量。
 - HarmonySettingsSurface.tsx 和面板 CSS：独立、不透明的设置抽屉，随宿主深浅色更新。
 - useTheme 在构建时替换为宿主主题订阅器，不再读取 Piora 的皮肤或主题存储。
+- UiInspector、inspector-model 和 tree API：可选截图与坐标信息，提供快照拾取、树和属性联动。
+- DeviceExplorer 替代文件页入口，使用现有文件 API 展示懒加载树表和操作侧面板；device-files 规范化根目录条目路径。
+- 暂时隐藏应用、数据库、日志、终端、自动化和语音验证入口，保留原有实现和 Agent 工具。
 
 原生窗口及鉴权端点由 src/native-mirror.ts 和 src/native-mirror.cjs 实现。它们不依赖 Piora Electron 主进程，窗口隐藏时停止画面订阅，插件卸载时关闭窗口和本地服务。
 
