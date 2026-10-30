@@ -7,11 +7,12 @@ h.manager.listDevices = async () => [];
 h.manager.subscribe = () => () => {};
 h.manager.getState = () => ({runtime:{status:'ready',hdcPath:'C:\\HarmonySDK\\hdc.exe'},devices:[],leases:[],controls:[],snapshots:[]});
 const browser = await chromium.launch({channel:'msedge', headless:true});
-const page = await browser.newPage({viewport:{width:480,height:820}});
+const page = await browser.newPage({viewport:{width:480,height:820},locale:'zh-CN'});
 const errors = [], failures = [];
 page.on('pageerror', error => errors.push(error.message));
 page.on('response', response => {if (response.status() >= 400) failures.push(response.url());});
 await mkdir('assets', {recursive:true});
+await mkdir('.verification', {recursive:true});
 // Public screenshots use fixture data only, never the user's phone or filesystem paths.
 await page.route('**/api/harmony/config', route => route.fulfill({json:{config:{hdcPath:'C:\\HarmonySDK\\hdc.exe'}, storage:{screenshotDirectory:'C:\\Harmony\\Screenshots',recordingDirectory:'C:\\Harmony\\Recordings'},diagnostics:{},candidates:[]}}));
 try {
@@ -40,4 +41,8 @@ try {
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth > innerWidth),false);
   await writeFile('.verification/redesign.json',JSON.stringify({errors,failures,light:true,dark:true,opaqueDialogs:true,settingsDrawer:true,separateDeviceInfo:true},null,2));
   console.log('Redesign: light/dark, opaque dialogs, settings drawer and separate pages passed.');
+} catch (error) {
+  await page.screenshot({path:'.verification/redesign-failure.png'});
+  console.error(JSON.stringify({errors,failures,text:await page.locator('body').innerText()}));
+  throw error;
 } finally {await browser.close();await h.close();}

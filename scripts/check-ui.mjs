@@ -6,7 +6,7 @@ const h = originArg ? null : await harness({fake:false});
 const origin = originArg || h.origin;
 await mkdir('.verification', {recursive:true});
 const browser = await chromium.launch({channel:'msedge', headless:true});
-const page = await browser.newPage({viewport:{width:420,height:900}});
+const page = await browser.newPage({viewport:{width:420,height:900},locale:'zh-CN'});
 const errors = [], failures = [];
 page.on('pageerror', error => errors.push(error.message));
 page.on('response', response => {if (response.status() >= 400) failures.push({url:response.url(),status:response.status()});});
