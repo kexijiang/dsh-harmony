@@ -1,0 +1,33 @@
+:root {
+  color-scheme: light;
+  --bg:#ffffff; --bg-panel:#f7f8fa; --bg-hover:#eef0f3; --bg-selected:#eaf0ff;
+  --border:#e3e6eb; --text:#20232a; --text-muted:#626975; --text-dim:#858d99; --accent:#476beb;
+  --accent-hover:#3755c2; --danger:#d33f49; --status-failed:#d33f49; --status-ready:#179667; --status-attention:#b57a19;
+  --font-mono:Consolas,monospace; --font-sans:system-ui,"Microsoft YaHei",sans-serif;
+  --text-xs:11px; --text-sm:13px; --text-md:14px; --text-base:14px; --text-lg:16px;
+  --radius-panel:14px; --radius-control:7px; --control-height:34px; --control-height-compact:30px;
+  --overlay-scrim:rgba(20,24,34,.32); --overlay-blur:2px; --dialog-background:var(--bg);
+  --floating-border:var(--border); --floating-filter:none; --floating-section:var(--bg-panel);
+  --floating-shadow:0 16px 56px rgba(0,0,0,.18); --border-soft:var(--border); --surface-raised:var(--bg-panel);
+  --btn-primary-bg:var(--text); --btn-primary-fg:var(--bg); --btn-primary-bg-hover:var(--text-muted); --focus-ring:var(--accent);
+  font-family:var(--font-sans); background:var(--bg); color:var(--text);
+}
+:root[data-theme="dark"] {
+  color-scheme:dark; --bg:#191a1d; --bg-panel:#222428; --bg-hover:#2d3035; --bg-selected:#30394b;
+  --border:#35383e; --text:#ebecef; --text-muted:#a9afb9; --text-dim:#7e8795; --accent:#96b0ff;
+  --accent-hover:#b3c6ff; --danger:#ff858d; --status-failed:#ff858d; --overlay-scrim:rgba(0,0,0,.48);
+}
+* {box-sizing:border-box} [hidden] {display:none!important}
+body {margin:0;font-size:13px} html,body,#root {height:100%;width:100%}
+#root {display:flex;flex-direction:column;overflow:hidden}
+button,input,select,textarea {font:inherit} button {cursor:pointer} button:disabled {cursor:not-allowed;opacity:.45}
+a {color:var(--accent)} input,select,textarea {color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:7px}
+button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible {outline:2px solid var(--focus-ring);outline-offset:2px}
+::-webkit-scrollbar {width:7px;height:7px} ::-webkit-scrollbar-thumb {background:color-mix(in srgb,var(--text) 20%,transparent);border-radius:8px}
+.harmony-settings-backdrop {position:fixed;inset:0;z-index:3300;background:var(--overlay-scrim);display:flex;justify-content:flex-end}
+.harmony-settings-sheet {width:min(480px,100%);height:100%;overflow:auto;background:var(--bg);color:var(--text);border-left:1px solid var(--border);box-shadow:-8px 0 40px #0002;outline:none}
+.harmony-settings-sheet :is(input:not([type="checkbox"]),select) {min-height:34px;padding:6px 9px;}
+.harmony-settings-sheet button:not([role="switch"]) {border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text-muted);padding:6px 10px;}
+.harmony-settings-sheet p {font-size:12px;line-height:1.65;}
+.harmony-settings-sheet .settings-embedded-surface {height:auto!important;padding:18px!important;border-top:1px solid var(--border);}
+.harmony-settings-sheet .settings-embedded-surface h2 {font-size:14px!important;}

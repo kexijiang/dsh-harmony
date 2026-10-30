@@ -1,0 +1,108 @@
+{
+  "name": "dsh-plugin-harmony",
+  "version": "0.3.3",
+  "description": "DSH NEXT 鸿蒙设备工作台：Better Sidebar Tab、独立悬浮投屏、主题同步与 Agent 设备操作",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kexijiang/dsh-harmony.git"
+  },
+  "homepage": "https://github.com/kexijiang/dsh-harmony#readme",
+  "bugs": {
+    "url": "https://github.com/kexijiang/dsh-harmony/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "dsh-next",
+    "harmonyos",
+    "better-sidebar",
+    "hdc"
+  ],
+  "type": "module",
+  "main": "dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/client.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "dist",
+    "cordis.patch.yml",
+    "README.md",
+    "LICENSE",
+    "NOTICE.md"
+  ],
+  "engines": {
+    "node": ">=24.5.0",
+    "dsh": "^0.2.1-rc.4"
+  },
+  "license": "MIT",
+  "dsh": {
+    "client": {
+      "inject": [
+        "dsh-better-sidebar"
+      ],
+      "platform": "web"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "install:dsh": "node scripts/install.mjs",
+    "check": "npm run build && npm test",
+    "bundle": "npm run check && npm pack --pack-destination artifacts"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6 || ^0.2.1-rc.4",
+    "dsh-better-sidebar": "^0.28.2"
+  },
+  "peerDependenciesMeta": {
+    "dsh-better-sidebar": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@electron/get": "^3.1.0",
+    "@grpc/grpc-js": "^1.14.0",
+    "@sinclair/typebox": "^0.34.41",
+    "@sqlite.org/sqlite-wasm": "3.53.4-build2",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "extract-zip": "^2.0.1",
+    "hypium-driver": "6.1.210",
+    "iconv-lite": "^0.7.3",
+    "json5": "^2.2.3",
+    "jszip": "^3.10.1",
+    "mediabunny": "1.62.1",
+    "node-pty": "1.1.0",
+    "proper-lockfile": "^4.1.2",
+    "sharp": "^0.35.5",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@codemirror/autocomplete": "^6.20.0",
+    "@codemirror/commands": "^6.10.0",
+    "@codemirror/lang-json": "^6.0.2",
+    "@codemirror/lang-sql": "^6.10.0",
+    "@codemirror/language": "^6.12.0",
+    "@codemirror/search": "^6.5.0",
+    "@codemirror/state": "^6.5.0",
+    "@codemirror/view": "^6.38.0",
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@lezer/highlight": "^1.2.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/addon-search": "^0.16.0",
+    "@xterm/xterm": "^6.0.0",
+    "diff": "^9.0.0",
+    "esbuild": "^0.25.0",
+    "playwright-core": "^1.64.1",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "typescript": "^5.9.0"
+  }
+}
