@@ -122,6 +122,7 @@ export function apply(ctx: any, config: { cwd?: string; hdcPath?: string; dataDi
         if (url.pathname === '/harmony/context') { res.setHeader('Content-Type', 'application/json'); res.setHeader('Cache-Control', 'no-store'); res.end(JSON.stringify({ cwd })); return; }
         const files: Record<string, [string, string]> = {
           '/harmony': ['panel.html', 'text/html; charset=utf-8'], '/harmony/': ['panel.html', 'text/html; charset=utf-8'],
+          '/harmony/video.worker.js': ['video.worker.js', 'text/javascript'],
           '/harmony/panel.js': ['panel.js', 'text/javascript'], '/harmony/panel.css': ['panel.css', 'text/css'],
         };
         const file = files[url.pathname];

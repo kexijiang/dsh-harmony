@@ -2,26 +2,22 @@
 
 将 [Piora](https://github.com/kexijiang/Piora) 的鸿蒙设备工作台与 Agent 操作能力带到 **DSH NEXT 桌面版**。通过 **Better Sidebar** 注册右侧“鸿蒙设备”Tab，同时支持独立悬浮投屏。
 
-当前版本 **0.4.3**：投屏与控制同步 Piora beta.15；采用常驻触控通道、简化控制栏和高位空闲端口。50ms 操作反馈目标尚未达到，详见 [更新说明](CHANGELOG.md)。
+当前版本 **0.4.4**：投屏界面和输入处理对齐 Piora 0.5.10-beta.15，界面基线见 [mirror-baseline.json](vendor/mirror-baseline.json)。
 
 ## 功能
 
-- 侧栏投屏与 Windows 悬浮窗相互切换；悬浮窗可置顶、缩放和拖动。
-- 跟随 NEXT 深浅色与主题配色；设置使用不透明抽屉，连接详情使用独立对话框。
-- 主导航保留投屏、文件、媒体、设备信息，设备型号、系统和序列号放在“设备信息”页。
-- 应用、数据库、日志、终端、自动化和语音验证页面暂不开放；相关实现保留，完善后再恢复入口。
-- 保留 Piora 的设备管理、截图、录屏、文件与诊断能力，以及 Agent 操作接口。
-- `harmony_control` 为 Agent 提供设备枚举、页面观察、点击、滑动、文字输入等操作；截图返回 DSH 图片附件。
-- “更多 → 界面结构”提供 UI 检查器：获取截图与组件树，点击画面定位组件、查看属性，支持搜索、父组件选择和重叠组件切换。检查快照时不会点击手机。
-- “文件”采用目录树表格，按需展开，显示真实权限、修改时间和大小；右键或“属性 / 操作”可预览文本、上传、下载、新建、重命名、复制、移动及删除。支持普通目录与可调试应用沙箱；设备授权及原有写入范围仍然生效。
+- 仅展示设备选择、投屏、截图、录屏及操控；旧功能标签、概览和设备信息面板不再显示。
+- 侧栏与独立悬浮窗切换；采用 Piora 的图标控制栏、普通光标和显示选项，移除底部文字输入。
+- 居中设置弹窗支持点击外部和 Escape 关闭，截图/录屏保存目录直接编辑并自动保存。
+- 常驻按下、移动、松开控制与释放保护，音量和电源使用单次按键；保留 Agent 工具接口及资源清理。
+- DSH 使用自己的主题与原生窗口桥接；受 dsh-app 协议限制，在已认证渲染器运行同一视频引擎和 WebCodecs，保持宿主的权限与安全策略。
+- 50ms 操作反馈目标尚未达到，本版不承诺该延迟。
 
-![浅色面板](assets/panel-light.png)
-![深色面板](assets/panel-dark.png)
-![设置抽屉](assets/settings-light.png)
-![设备文件浏览器](assets/files-light.png)
-![UI 检查器](assets/inspector-light.png)
+![设备工具栏](assets/panel-light.png)
+![深色主题](assets/panel-dark.png)
+![设备设置](assets/settings-light.png)
 
-截图使用测试数据；不会包含真实设备或用户文件。
+公开截图使用测试数据。真实设备验收按具体包和测试结果单独记录。
 
 ## 安装
 
@@ -40,7 +36,7 @@ https://github.com/kexijiang/dsh-harmony/releases/latest/download/dsh-plugin-har
 
 插件市场为 [dsh-market](https://github.com/dsh-market/dsh-market)，其目录来自 awesome-dsh-plugin。市场收录需要目录 PR 合并并刷新索引，仓库公开不等于已可搜索。收录前可使用上面的 Release 安装。
 
-悬浮窗优先复用 DSH 已有 Electron；没有运行时时，首次打开会下载官方 Electron 43.3.0（约 140 MB）。也可配置 `electronPath` 指向本机 Electron。手机息屏可能暂停视频，亮屏后会恢复或可点击“重新连接”；插件不会绕过锁屏或调试授权。镜像画面用于查看，Agent 触控通过 `harmony_control` 操作。
+悬浮窗优先复用 DSH 已有 Electron；没有运行时时，首次打开会下载官方 Electron 43.3.0（约 140 MB）。也可配置 `electronPath` 指向本机 Electron。手机息屏可能暂停视频，亮屏后会恢复或可点击“重新连接”；插件不会绕过锁屏或调试授权。投屏默认允许鼠标点击与拖动，Agent 触控通过 `harmony_control` 操作。
 
 ## Agent 使用
 

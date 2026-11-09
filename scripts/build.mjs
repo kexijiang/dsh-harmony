@@ -38,6 +38,7 @@ function resolveSource(path) {
   for (const suffix of ['', '.ts', '.tsx', '.js', '.json', '/index.ts', '/index.tsx']) if (existsSync(path + suffix) && statSync(path + suffix).isFile()) return path + suffix;
 }
 const sourcePlugin = { name: 'piora-source', setup(build) {
+  build.onResolve({filter:/^dsh:mirror-worker$/},()=>({path:join(root,'src/mirror-worker.ts')}));
   build.onResolve({ filter: /^(next\/|@earendil-works\/pi-)/ }, args => {
     const map = { 'next/server': 'next-server.ts', 'next/dynamic': 'dynamic.tsx', '@earendil-works/pi-ai': 'pi-ai.ts', '@earendil-works/pi-coding-agent': 'pi-sdk.ts' };
     if (map[args.path]) return { path: join(root, 'src/adapters', map[args.path]) };
@@ -60,7 +61,9 @@ const sourcePlugin = { name: 'piora-source', setup(build) {
   build.onLoad({ filter: /\.(tsx?|css|js|json)$/ }, async args => {
     if (!args.path.startsWith(source) || args.path.replaceAll('\\', '/').includes('/node_modules/')) return;
     visited.add(relative(source, args.path).replaceAll('\\', '/'));
-    const contents = await readFile(args.path, 'utf8');
+    let contents = await readFile(args.path, 'utf8');
+    if (relative(source,args.path).replaceAll('\\','/') === 'lib/harmony/runtime/worker-client.ts') contents = contents.replace('serialization: "advanced"','serialization: "json"');
+    if (relative(source,args.path).replaceAll('\\','/') === 'hooks/useHarmonyMirror.ts') contents = "import { createMirrorWorker } from 'dsh:mirror-worker';\n" + contents.replace('new Worker(new URL("../lib/harmony/mirror/video.worker.ts", import.meta.url), { type: "module", name: "piora-harmony-mirror" })', 'createMirrorWorker()');
     const loader = args.path.endsWith('.module.css') ? 'local-css' : extname(args.path).slice(1);
     return { contents, loader, resolveDir: dirname(args.path) };
   });
@@ -68,11 +71,14 @@ const sourcePlugin = { name: 'piora-source', setup(build) {
 const base = { bundle: true, logLevel: 'warning', plugins: [sourcePlugin], nodePaths: [join(root, 'node_modules')], target: 'es2022', jsx: 'automatic', legalComments: 'eof' };
 await build({ ...base, entryPoints: [join(root, 'src/index.ts')], outfile: join(dist, 'index.js'), platform: 'node', format: 'esm', packages: 'external', banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" } });
 await build({ ...base, entryPoints: [join(source, 'lib/harmony/runtime/worker-entry.ts')], outfile: join(dist, '.harmony-worker/harmony/runtime/worker-entry.js'), platform: 'node', format: 'esm', packages: 'external' });
+const videoWorker=await build({ ...base, entryPoints: [join(source, 'lib/harmony/mirror/video.worker.ts')], platform:'browser', format:'esm', minify:true, write:false });
+await writeFile(join(dist,'video.worker.js'),videoWorker.outputFiles[0].text);
 await build({ ...base, entryPoints: [join(root, 'src/panel.tsx')], outfile: join(dist, 'panel.js'), platform: 'browser', format: 'esm', minify: true, define: { 'process.env.NODE_ENV': '"production"' }, loader: { '.woff2': 'dataurl', '.svg': 'dataurl' } });
+
 const client = await build({ entryPoints: [join(root, 'src/client.tsx')], bundle: true, platform: 'browser', format: 'cjs', external: ['react', 'react/jsx-runtime'], jsx: 'automatic', write: false });
 await writeFile(join(dist, 'client.js'), `window.__ModuleLoader__.load({id:'dsh-plugin-harmony',factory:(require)=>{const module={exports:{}};const exports=module.exports;\n${client.outputFiles[0].text}\nreturn module.exports;}});\n`);
 await writeFile(join(dist, 'panel.html'), '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>鸿蒙设备 · dsh</title><link rel="stylesheet" href="/harmony/panel.css"></head><body><div id="root"></div><script type="module" src="/harmony/panel.js"></script></body></html>');
-async function copy(sourceFile, destination) { await mkdir(dirname(destination), { recursive: true }); await copyFile(sourceFile, destination); }
+async function copy(sourceFile, destination) { await mkdir(dirname(destination), { recursive: true }); if (existsSync(destination) && (await readFile(sourceFile)).equals(await readFile(destination))) return; await copyFile(sourceFile, destination); }
 for (const file of ['sqlite-inspector.cjs', 'sqlite-error-location.cjs', 'PioraHapSigner.java', 'deveco-password.mjs']) {
   const rel = 'lib/harmony/runtime/' + file; visited.add(rel); await copy(join(source, rel), join(dist, rel));
 }

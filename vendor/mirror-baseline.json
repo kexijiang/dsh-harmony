@@ -1,0 +1,13 @@
+{
+  "revision": "a710777f487f69eb2a7e055b4390950f8cebf2e2",
+  "version": "0.5.10-beta.15",
+  "sha256": {
+    "components/workspace/HarmonyPanel.tsx": "e96f006248da140bbe5ef890f80e7d4345b4bbe3c6b32e005c9c7a46f7246ebd",
+    "components/workspace/HarmonyPanel.module.css": "0dc56d620bb541c83667908abbd6171de5cc399ec0eea37d54f54595c25ec274",
+    "components/workspace/harmony/HarmonySettingsSurface.tsx": "9e2d72349a62c56ce0cdbc5401ee8388ccba19b8cda0d5d0762773bdd6fd80f7",
+    "components/workspace/harmony/MirrorWindow.tsx": "cfb994184812cbe154eff1cdd9bb9998fcd9840966d15de0ff335d2e31cb701c",
+    "components/workspace/harmony/MirrorWindow.module.css": "4640add01936ec21385d21a1f8ab0feab840aa2f351fb04c4ff17d1a23c9eec3",
+    "hooks/useHarmonyMirror.ts": "5549a9ddfa88f727881946fc158ee67cf1c4a2ab80fba4158e18dc9a24a47783",
+    "hooks/useMirrorInput.ts": "895a48e1173fb68057e4e3019ba18e0586bab1824de11677474c7b91f5dffeea"
+  }
+}

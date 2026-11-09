@@ -23,3 +23,7 @@
 ## 2026-11-09 投屏同步
 
 基于 Piora a710777f487f69eb2a7e055b4390950f8cebf2e2（beta.15）更新投屏、常驻 DOWN/MOVE/UP 控制、单次物理按键和高位端口分配。保留此前 DSH 的 HarmonyPanel、设置抽屉、tree API、device-files 及传输/数据库任务 dispose 适配。provenance 标识导入基线，快照包含这些局部适配。独立窗口按报告的工具栏高度适配宽高。50ms 操作反馈目标尚未达到；本插件尚无真实手机和最终宿主安装验收。
+
+## 0.4.4 以当前 Piora 为准
+
+上述旧主面板、抽屉和样式适配已撤回；当前页面仅展示投屏/截图/录屏/操控。主面板、设置、悬浮窗和输入 Hook 原文件保持 beta.15 基线，基线散列测试防止再次混入旧布局。构建时仅将 Worker 构造替换为 DSH 渲染器兼容桥：复用同一 MirrorVideoEngine，不放宽 CSP 或认证；原生 codec 仍由 Chromium 执行。控制 Worker 的 IPC 构建适配为 JSON。旧文件树及检查器实现保留，但不再从主界面展示；历史 check-inspector 脚本仅适用于旧 UI，CI 使用 API/模型单元测试以及新的当前界面回归。

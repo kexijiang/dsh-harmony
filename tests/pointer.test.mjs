@@ -26,3 +26,5 @@ test('bundled pointer route forwards phases and rejects malformed or foreign inp
   assert.equal((await send({ ...base, phase: 'down' }, { Origin: 'https://evil.example' })).status, 403);
   assert.equal(calls.length, 3);
 });
+
+test('video renderer worker is packaged and served as JavaScript', async t=>{const h=await harness();t.after(()=>h.close());const r=await fetch(h.origin+'/harmony/video.worker.js');assert.equal(r.status,200);assert.match(r.headers.get('content-type'),/javascript/);const code=await r.text();assert.match(code,/VideoDecoder/);assert.match(code,/onmessage/);});

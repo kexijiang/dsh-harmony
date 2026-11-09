@@ -10,10 +10,11 @@ import { useHarmonyManualControl } from "@/hooks/useHarmonyManualControl";
 import { useHarmonyWindow } from "@/hooks/useHarmonyWindow";
 import { useHarmonyMedia } from "@/hooks/useHarmonyMedia";
 import { PioraMessageHost, showPioraMessage } from "../PioraMessage";
+import { HarmonyDeviceSelect } from "./harmony/HarmonyDeviceSelect";
 import { HarmonySettingsSurface } from "./harmony/HarmonySettingsSurface";
 import { HarmonyStorageSettings } from "../HarmonyStorageSettings";
 import dynamic from "next/dynamic";
-import { formatHarmonyDeviceLabel, rememberHarmonyDeviceIdentity, type HarmonyDeviceLabelSource } from "@/lib/harmony/device-label";
+import { formatHarmonyDeviceLabel, formatHarmonyDeviceTitle, rememberHarmonyDeviceIdentity, type HarmonyDeviceLabelSource } from "@/lib/harmony/device-label";
 import { currentHarmonyResponseSample, normalizeHarmonyResponseSample, type HarmonyResponseSample } from "@/lib/harmony/device-connection";
 import { HarmonyRequestError } from "@/lib/harmony/request-error";
 import { AliIcon } from "../AliIcon";
@@ -23,10 +24,6 @@ const WorkbenchTools = dynamic(() => import("./harmony/WorkbenchTools").then(mod
 import { MediaHistory } from "./harmony/MediaHistory";
 import { TcpDeviceConnection } from "./harmony/TcpDeviceConnection";
 import styles from "./HarmonyPanel.module.css";
-import { UiInspector } from "./harmony/UiInspector";
-
-// Keep unfinished pages implemented, but unavailable through desktop navigation.
-const hiddenWorkbenchTabs = new Set(["apps", "databases", "logs", "commands", "scenarios", "voice"]);
 
 type RuntimeProfile = "normal" | "device-control";
 type HarmonyDevice = {
@@ -222,7 +219,7 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
   const [visionModelKey, setVisionModelKey] = useState("");
   const [shareScreenshot, setShareScreenshot] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [toolTab, setToolTab] = useState<"apps" | "files" | "databases" | "commands" | "scenarios" | "voice" | "logs" | "history" | "diagnostics" | "inputs" | "overview" | "media" | "tree" | "mirror">("mirror");
+  const [toolTab, setToolTab] = useState<"apps" | "files" | "databases" | "commands" | "scenarios" | "voice" | "logs" | "history" | "diagnostics" | "inputs" | "overview" | "media" | "tree">("overview");
   const [databaseSelection, setDatabaseSelection] = useState("");
 
   const [toolsVisited, setToolsVisited] = useState(false);
@@ -276,10 +273,10 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
     if (mirror?.open && mirror.presentation === "sidebar" && mirror.serial) setSelectedSerial(mirror.serial);
   }, [mirror?.open, mirror?.presentation, mirror?.serial]);
   const [mirrorPresentation, setMirrorPresentation] = useState<"floating" | "sidebar">("floating");
-  useEffect(() => { if (mirror?.presentation) setMirrorPresentation(mirror.presentation); }, [mirror?.presentation]);
+  useEffect(() => { if (mirror?.presentation) setMirrorPresentation(mirror.pendingPresentation ?? mirror.presentation); }, [mirror?.presentation, mirror?.pendingPresentation]);
   const openSelectedMirror = async () => {
     const bridge = window.piDesktop?.harmonyMirror; if (!bridge || !selectedSerial) return;
-    try { if (mirrorPresentation === "sidebar") { await bridge.selectDevice(selectedSerial); await bridge.setPresentation("sidebar"); setToolTab("mirror"); } else await bridge.open(selectedSerial); }
+    try { if (mirrorPresentation === "sidebar") { await bridge.selectDevice(selectedSerial); await bridge.setPresentation("sidebar"); } else await bridge.open(selectedSerial); }
     catch (failure) { setError(String(failure)); }
   };
   const media = useHarmonyMedia(selectedSerial, mirror?.ownerId ?? ownerId, active && desktopAvailable, chinese);
@@ -329,10 +326,9 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
     load(); const timer = setInterval(load, 3000); return () => { controller.abort(); clearInterval(timer); };
   }, [active, selectedSerial]);
   const changeToolTab = (tab: typeof toolTab) => {
-    if (hiddenWorkbenchTabs.has(tab)) return;
     if (drawerBodyRef.current) drawerScrollPositions.current[`${selectedSerial}:${toolTab}`] = drawerBodyRef.current.scrollTop;
     setToolTab(tab); setToolsVisited(true); setMoreOpen(false);
-    if (!["mirror", "overview", "apps", "files", "media"].includes(tab)) setExtraTabs(current => current.includes(tab) ? current : [...current, tab]);
+    if (!["overview", "apps", "files", "media"].includes(tab)) setExtraTabs(current => current.includes(tab) ? current : [...current, tab]);
   };
   const openTools = (tab = toolTab) => { changeToolTab(tab); setSettingsOpen(false); };
   useEffect(() => { if (drawerBodyRef.current) drawerBodyRef.current.scrollTop = drawerScrollPositions.current[`${selectedSerial}:${toolTab}`] ?? 0; }, [selectedSerial, toolTab]);
@@ -557,7 +553,6 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
         : selected ? copy("连接未确认", "Connection unconfirmed") : copy("未连接", "Not connected");
   const visionModel = visionModels.find((model) => `${model.provider}\u0000${model.modelId}` === visionModelKey);
   const responseSample = selectedOnline ? currentHarmonyResponseSample(selected?.responseSample) : undefined;
-  const serialSuffix = selected ? devices.some(other => other.serial !== selected.serial && other.serial.slice(-6) === selected.serial.slice(-6)) ? selected.serial : selected.serial.slice(-6) : undefined;
   const connectionLabel = selected?.transport === "usb" ? "USB" : selected?.transport === "tcp" ? "TCP/Wi-Fi" : copy("连接方式未知", "Unknown transport");
   const connectionHint = selected?.transportEvidence === "endpoint"
     ? copy("连接方式根据 IP:端口标识推断，HDC 未直接标注。", "Transport inferred from IP:port; not reported directly by HDC.")
@@ -568,34 +563,33 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       <div className={styles.deviceIdentity}>
         <span className={styles.deviceMark}><AliIcon name="mobile" size={15} /></span>
         <div className={styles.deviceIdentityText}>
-        <select aria-label={copy("选择设备", "Select device")} title={selected ? `${formatHarmonyDeviceLabel(selected)} · ${selected.serial}${selected.osVersion ? ` · ${selected.osVersion}` : ""}` : undefined} value={selectedSerial} onChange={(event) => {
-          const nextSerial = event.target.value;
+        <HarmonyDeviceSelect displayLabel={selected ? formatHarmonyDeviceTitle(selected, copy("鸿蒙设备", "Harmony device")) : undefined} label={copy("选择设备", "Select device")} value={selectedSerial} onChange={nextSerial => {
           if (window.piDesktop?.harmonyMirror) void window.piDesktop.harmonyMirror.selectDevice(nextSerial).catch(failure => setError(String(failure)));
           else { clearControl(); setSelectedSerial(nextSerial); setTree(null); }
-        }}>
-          {selectedSerial && !devices.some(device => device.serial === selectedSerial) ? <option value={selectedSerial}>{formatHarmonyDeviceLabel(deviceIdentities.current.get(selectedSerial) ?? { serial: selectedSerial })} · {copy("已断连", "Disconnected")}</option> : null}
-          {!devices.length && !selectedSerial ? <option value="">{copy("没有设备", "No device")}</option> : null}
-          {devices.map((device) => {
-            const label = formatHarmonyDeviceLabel(device);
-            const suffix = devices.some(other => other.serial !== device.serial && other.serial.slice(-6) === device.serial.slice(-6)) ? device.serial : device.serial.slice(-6);
-            return <option key={device.serial} value={device.serial}>{label === device.serial ? label : `${label} · ${suffix}`}</option>;
-          })}
-        </select>
+        }} options={[
+          ...(selectedSerial && !devices.some(device => device.serial === selectedSerial) ? [{ value: selectedSerial, label: `${formatHarmonyDeviceLabel(deviceIdentities.current.get(selectedSerial) ?? { serial: selectedSerial })} · ${copy("已断连", "Disconnected")}` }] : []),
+          ...(!devices.length && !selectedSerial ? [{ value: "", label: copy("没有设备", "No device") }] : []),
+          ...devices.map(device => { const label = formatHarmonyDeviceLabel(device); const suffix = devices.some(other => other.serial !== device.serial && other.serial.slice(-6) === device.serial.slice(-6)) ? device.serial : device.serial.slice(-6); return { value: device.serial, label: label === device.serial ? label : `${label} · ${suffix}` }; }),
+        ]} />
         <div className={styles.deviceConnection}>
         <span className={styles.deviceState} data-state={selected?.state ?? "unknown"}><i />{deviceStateLabel}</span>
-        {selected && serialSuffix ? <span title={copy(`设备序列号：${selected.serial}`, `Device serial: ${selected.serial}`)}>{selected.serial === serialSuffix ? serialSuffix : `…${serialSuffix}`}</span> : null}
         {selected ? <span title={connectionHint}>{connectionLabel}</span> : null}
-        {selectedOnline ? <span title={responseSample ? copy(`最近一次只读参数响应（包含主机 HDC 耗时），采样于 ${new Date(responseSample.sampledAt).toLocaleString()}；不代表视频延迟。`, `Last read-only parameter response (includes host HDC overhead), sampled at ${new Date(responseSample.sampledAt).toLocaleString()}; not video latency.`) : copy("尚无当前可核验的参数响应样本；不会显示旧值或估算延迟。", "No current verified parameter response; stale or estimated latency is not shown.")}>{responseSample ? copy(`响应 ${responseSample.durationMs} ms`, `Response ${responseSample.durationMs} ms`) : copy("响应未确认", "Response unconfirmed")}</span> : null}
+        {selectedOnline && responseSample ? <span title={responseSample ? copy(`最近一次只读参数响应（包含主机 HDC 耗时），采样于 ${new Date(responseSample.sampledAt).toLocaleString()}；不代表视频延迟。`, `Last read-only parameter response (includes host HDC overhead), sampled at ${new Date(responseSample.sampledAt).toLocaleString()}; not video latency.`) : copy("尚无当前可核验的参数响应样本；不会显示旧值或估算延迟。", "No current verified parameter response; stale or estimated latency is not shown.")}>{responseSample ? copy(`响应 ${responseSample.durationMs} ms`, `Response ${responseSample.durationMs} ms`) : copy("响应未确认", "Response unconfirmed")}</span> : null}
         </div></div>
       </div>
       <div className={styles.toolbarActions}>
-        <select aria-label={copy("投屏位置", "Mirror position")} value={mirror?.open ? mirror.presentation ?? mirrorPresentation : mirrorPresentation} onChange={event => {
-          const value = event.target.value as "floating" | "sidebar"; setMirrorPresentation(value);
-          if (mirror?.open) void window.piDesktop?.harmonyMirror?.setPresentation(value).then(() => { if (value === "sidebar") setToolTab("mirror"); }).catch(failure => setError(String(failure)));
-        }}><option value="floating">{copy("悬浮投屏", "Floating mirror")}</option><option value="sidebar">{copy("面板内投屏", "In-panel mirror")}</option></select>
-        <button className={styles.primaryButton} type="button" disabled={!selectedOnline} onClick={() => void openSelectedMirror()}>{copy("打开投屏", "Open mirror")}</button>
-        <button type="button" disabled={!canScreenshot || Boolean(media.busy)} onClick={() => void mediaAction("capture_screenshot")} title={`${copy("截图", "Screenshot")}${screenshotShortcutLabel ? ` · ${screenshotShortcutLabel}` : ""}`}>{screenshotBusy ? copy("截图中…", "Capturing…") : copy("截图", "Screenshot")}</button>
-        <button type="button" className={recording ? styles.recordingButton : undefined} aria-label={recording ? copy("停止录屏", "Stop recording") : copy("开始录屏", "Start recording")} disabled={!selectedOnline || Boolean(controlStatus) || media.transitioning || Boolean(window.piDesktop?.harmonyMirror && !mirror) || Boolean(recording && !ownsRecording)} onClick={() => void mediaAction(recording ? "stop_recording" : "start_recording")} title={copy("最长30分钟", "30 minute limit")}>{media.transitioning && media.busy !== "capture_screenshot" ? copy(recording?.phase === "saving" ? "保存中…" : "处理中…", "Working…") : recording ? `${copy("停止录屏", "Stop")} · ${formatRecordingElapsed(recordingElapsed)}` : copy("录屏", "Record")}</button>
+        <div className={styles.presentationToggle} role="group" aria-label={copy("投屏位置", "Mirror position")}>
+          {(["floating", "sidebar"] as const).map(value => <button type="button" key={value}
+            aria-label={value === "floating" ? copy("独立悬浮窗", "Floating window") : copy("侧栏内显示", "Inside sidebar")}
+            title={value === "floating" ? copy("独立悬浮窗", "Floating window") : copy("侧栏内显示", "Inside sidebar")}
+            aria-pressed={(mirror?.open ? mirror.pendingPresentation ?? mirror.presentation ?? mirrorPresentation : mirrorPresentation) === value}
+            onClick={() => { setMirrorPresentation(value); if (mirror?.open) void window.piDesktop?.harmonyMirror?.setPresentation(value).catch(failure => setError(String(failure))); }}>
+            <AliIcon name={value === "floating" ? "desktop" : "layout"} size={16} />
+          </button>)}
+        </div>
+        <button className={styles.primaryButton} type="button" disabled={!selectedOnline} onClick={() => void openSelectedMirror()}><AliIcon name="play" size={14} /><span>{copy("打开投屏", "Open mirror")}</span></button>
+        <button className={styles.mediaButton} type="button" aria-label={screenshotBusy ? copy("截图中…", "Capturing…") : copy("截图", "Screenshot")} disabled={!canScreenshot || Boolean(media.busy)} onClick={() => void mediaAction("capture_screenshot")} title={`${copy("截图", "Screenshot")}${screenshotShortcutLabel ? ` · ${screenshotShortcutLabel}` : ""}`}><AliIcon name="camera" size={17} /><span>{screenshotBusy ? copy("截图中…", "Capturing…") : copy("截图", "Screenshot")}</span></button>
+        <button type="button" className={`${styles.mediaButton} ${recording ? styles.recordingButton : ""}`} aria-label={recording ? copy("停止录屏", "Stop recording") : copy("开始录屏", "Start recording")} disabled={!selectedOnline || Boolean(controlStatus) || media.transitioning || Boolean(window.piDesktop?.harmonyMirror && !mirror) || Boolean(recording && !ownsRecording)} onClick={() => void mediaAction(recording ? "stop_recording" : "start_recording")} title={copy("最长30分钟", "30 minute limit")}><AliIcon name={recording ? "stop" : "record-circle"} size={17} /><span>{media.transitioning && media.busy !== "capture_screenshot" ? copy(recording?.phase === "saving" ? "保存中…" : "处理中…", "Working…") : recording ? `${copy("停止录屏", "Stop")} · ${formatRecordingElapsed(recordingElapsed)}` : copy("录屏", "Record")}</span></button>
         <div className={styles.secondaryActions}>
         {onMaximizedChange ? <button className={styles.focusButton} aria-label={maximized ? copy("返回双栏", "Return to split view") : copy("展开设备工作台", "Expand device workbench")} type="button" onClick={() => onMaximizedChange(!maximized)} title={maximized ? copy("返回双栏", "Return to split view") : copy("展开设备工作台", "Expand device workbench")}>
           <AliIcon name={maximized ? "fullscreen-exit" : "fullscreen"} size={16} />
@@ -603,7 +597,7 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
         <button className={styles.iconButton} type="button" onClick={() => { void refresh(); }} disabled={busy} title={copy("刷新设备", "Refresh devices")} aria-label={copy("刷新设备", "Refresh devices")}><AliIcon name="reload" size={14} /></button>
         <button className={styles.iconButton} type="button" onClick={() => setSettingsOpen((open) => !open)} aria-pressed={settingsOpen} title={copy("设备设置", "Device settings")} aria-label={copy("设备设置", "Device settings")}><AliIcon name="setting" size={15} /></button>
         </div>
-        <details className={styles.compactActions}><summary aria-label={copy("设备操作菜单", "Device actions")}>•••</summary><div>
+        <details className={styles.compactActions}><summary aria-label={copy("设备操作菜单", "Device actions")}><AliIcon name="ellipsis" size={18} /></summary><div>
         {onMaximizedChange ? <button className={styles.focusButton} aria-label={maximized ? copy("返回双栏", "Return to split view") : copy("展开设备工作台", "Expand device workbench")} type="button" onClick={() => onMaximizedChange(!maximized)} title={maximized ? copy("返回双栏", "Return to split view") : copy("展开设备工作台", "Expand device workbench")}>
           <AliIcon name={maximized ? "fullscreen-exit" : "fullscreen"} size={16} />
         </button> : null}
@@ -627,15 +621,13 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
         </select> : null}
         <div className={styles.pathRow}>
           <input aria-label={copy("HDC 路径", "HDC path")} value={sdkPath} placeholder={copy("选择 DevEco SDK 或 hdc.exe", "Choose DevEco SDK or hdc.exe")} onChange={(event) => setSdkPath(event.target.value)} />
-          {window.piDesktop?.selectHarmonyRuntimePath ? <>
-            <button className={styles.iconButton} type="button" disabled={busy} onClick={() => void chooseRuntimePath("sdk")} title={copy("选择 SDK 文件夹", "Choose SDK folder")} aria-label={copy("选择 SDK 文件夹", "Choose SDK folder")}><AliIcon name="folder-open" size={14} /></button>
-            <button className={styles.iconButton} type="button" disabled={busy} onClick={() => void chooseRuntimePath("hdc")} title={copy("选择 hdc.exe", "Choose hdc.exe")} aria-label={copy("选择 hdc.exe", "Choose hdc.exe")}><AliIcon name="file" size={14} /></button>
-          </> : null}
+          <button className={styles.iconButton} type="button" disabled={busy} onClick={() => void chooseRuntimePath("sdk")} title={copy("选择 SDK 文件夹", "Choose SDK folder")} aria-label={copy("选择 SDK 文件夹", "Choose SDK folder")}><AliIcon name="folder-open" size={14} /></button>
+          <button className={styles.iconButton} type="button" disabled={busy} onClick={() => void chooseRuntimePath("hdc")} title={copy("选择 hdc.exe", "Choose hdc.exe")} aria-label={copy("选择 hdc.exe", "Choose hdc.exe")}><AliIcon name="file" size={14} /></button>
         </div>
         {!runtimeCandidates.length ? <p className={styles.inlineHint}>{copy("没有自动找到，请手动选择。", "Nothing detected. Choose it manually.")}</p> : null}
       </div>
 
-      <div className={styles.settingGroup}>
+      <div hidden className={styles.settingGroup}>
         <div className={styles.settingCopy}><strong>{copy("手动 Wi-Fi 连接", "Manual Wi-Fi connection")}</strong><small>{copy("通过 HDC 连接或断开局域网设备", "Connect or disconnect a LAN device through HDC")}</small></div>
         <TcpDeviceConnection chinese={chinese} onRefresh={() => refresh()} />
         {selected ? <p className={styles.inlineHint}>{selected.transport === "usb" ? copy("当前设备：USB（HDC 已标注）", "Current device: USB (reported by HDC)")
@@ -644,7 +636,7 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
             : copy("当前设备的连接方式未知；HDC 未给出可核实的标记", "Connection type unknown; HDC did not provide a verifiable marker")}</p> : null}
       </div>
 
-      <div className={styles.settingGroup}>
+      <div hidden className={styles.settingGroup}>
         <div className={styles.settingCopy}><strong>{copy("投屏来源", "Video provider")}</strong><small>{copy("默认复用 DevEco 实时视频；锁屏与解锁使用同一通道，侧栏与悬浮窗保持一致。需要兼容的 DevEco 服务与已授权的 HDC 连接。", "Use DevEco live video by default, with the same stream while locked or unlocked in both docked and floating views. Requires a compatible DevEco service and authorized HDC connection.")}</small></div>
         <select aria-label={copy("投屏来源", "Video provider")} value={videoProvider} onChange={event => setVideoProvider(event.target.value as "deveco" | "bundled" | "hos-scrcpy")}>
           <option value="deveco">{copy("原生实时视频（内置，无需 DevEco）", "Native live video (built in, no DevEco required)")}</option><option value="bundled">{copy("旧版自动兼容（可回退手机组件）", "Legacy automatic (allow phone component fallback)")}</option><option value="hos-scrcpy">HOScrcpy</option>
@@ -656,11 +648,12 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
         </> : null}
       </div>
 
-      <div className={styles.settingGroup}>
+      <div hidden className={styles.settingGroup}>
         <label className={styles.settingToggle}>
-          <span className={styles.settingCopy}><strong>{copy("屏幕理解", "Screen understanding")}</strong><small>{copy("截图交给当前 dsh 对话模型，请选择支持图片的模型。", "Screenshots go to the current dsh chat model; choose a model that supports images.")}</small></span>
+          <span className={styles.settingCopy}><strong>{copy("视觉模型", "Vision model")}</strong><small>{copy("只负责看手机屏幕", "Only reads the phone screen")}</small></span>
+          <input type="checkbox" checked={visionEnabled} onChange={(event) => setVisionEnabled(event.target.checked)} />
         </label>
-        {false ? <>
+        {visionEnabled ? <>
           <select aria-label={copy("选择视觉模型", "Select vision model")} value={visionModelKey} onChange={(event) => setVisionModelKey(event.target.value)}>
             <option value="">{copy("选择模型", "Choose model")}</option>
             {visionModelKey && !visionModels.some((model) => `${model.provider}\u0000${model.modelId}` === visionModelKey)
@@ -674,41 +667,41 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       </div>
 
       <div className={styles.settingGroup}>
-        <div className={styles.settingsLinks}>
+        <div hidden className={styles.settingsLinks}>
           <button type="button" onClick={() => openTools("diagnostics")}>{copy("连接诊断", "Diagnostics")}</button>
           <button type="button" onClick={() => openTools("inputs")}>{copy("按键与触摸校准", "Input calibration")}</button>
         </div>
         <p className={styles.inlineHint}>{copy("锁屏时请在手机上手动解锁。投屏不会自动唤醒或解锁。", "Unlock on the phone when needed. Mirroring never wakes or unlocks it.")}</p>
       </div>
-      <HarmonyStorageSettings />
+      <HarmonyStorageSettings embedded />
       <div className={styles.settingsFooter}>
-        <button type="button" onClick={() => setSettingsOpen(false)}>{copy("取消", "Cancel")}</button>
-        <button className={styles.primaryButton} type="button" disabled={busy || (visionEnabled && !visionModelKey) || (videoProvider === "hos-scrcpy" && !hosPackageDirectory.trim())} onClick={saveSettings}>{copy("保存", "Save")}</button>
+        <button type="button" onClick={() => setSettingsOpen(false)}>{copy("关闭", "Close")}</button>
+        <button className={styles.primaryButton} type="button" disabled={busy} onClick={saveSettings}>{copy("保存连接设置", "Save connection settings")}</button>
       </div>
+
     </section></HarmonySettingsSurface> : null}
 
-    <nav className={styles.workbenchTabs} role="tablist" aria-label={copy("设备功能", "Device functions")}>
-      {(["mirror", "apps", "files", "media", "overview", ...extraTabs] as Array<typeof toolTab>).filter(tab => !hiddenWorkbenchTabs.has(tab)).map(tab => <div key={tab} className={styles.tabItem}>
+    <nav hidden className={styles.workbenchTabs} role="tablist" aria-label={copy("设备功能", "Device functions")}>
+      {(["overview", "apps", "files", "media", ...extraTabs] as Array<typeof toolTab>).map(tab => <div key={tab} className={styles.tabItem}>
         <button id={`${drawerId}-${tab}`} role="tab" aria-controls={drawerId} type="button" aria-selected={toolTab === tab} tabIndex={toolTab === tab ? 0 : -1} onKeyDown={event => {
-          const tabs = (["mirror", "apps", "files", "media", "overview", ...extraTabs] as Array<typeof toolTab>).filter(tab => !hiddenWorkbenchTabs.has(tab));
+          const tabs = ["overview", "apps", "files", "media", ...extraTabs] as Array<typeof toolTab>;
           const index = tabs.indexOf(tab);
           const next = event.key === "ArrowRight" ? (index + 1) % tabs.length : event.key === "ArrowLeft" ? (index + tabs.length - 1) % tabs.length : event.key === "Home" ? 0 : event.key === "End" ? tabs.length - 1 : -1;
           if (next >= 0) { event.preventDefault(); changeToolTab(tabs[next]); document.getElementById(`${drawerId}-${tabs[next]}`)?.focus(); }
-        }} onClick={() => changeToolTab(tab)}>{({ mirror: copy("投屏", "Mirror"), overview: copy("设备信息", "Device info"), apps: copy("应用", "Apps"), files: copy("文件", "Files"), media: copy("媒体", "Media"), databases: copy("数据库", "Databases"), commands: copy("终端", "Terminal"), logs: copy("日志", "Logs"), tree: copy("界面结构", "UI tree"), scenarios: copy("自动化", "Scenarios"), voice: copy("语音验证", "Voice"), diagnostics: copy("诊断", "Diagnostics"), inputs: copy("校准", "Calibration"), history: copy("任务", "Tasks") })[tab]}</button>
+        }} onClick={() => changeToolTab(tab)}>{({ overview: copy("概览", "Overview"), apps: copy("应用", "Apps"), files: copy("文件", "Files"), media: copy("媒体", "Media"), databases: copy("数据库", "Databases"), commands: copy("终端", "Terminal"), logs: copy("日志", "Logs"), tree: copy("界面结构", "UI tree"), scenarios: copy("自动化", "Scenarios"), voice: copy("语音验证", "Voice"), diagnostics: copy("诊断", "Diagnostics"), inputs: copy("校准", "Calibration"), history: copy("任务", "Tasks") })[tab]}</button>
         {extraTabs.includes(tab) ? <button type="button" aria-label={copy("关闭功能标签", "Close tool tab")} onClick={() => { setExtraTabs(current => current.filter(item => item !== tab)); if (toolTab === tab) setToolTab("overview"); }}>×</button> : null}
       </div>)}
       <div className={styles.moreMenu}><button type="button" aria-expanded={moreOpen} onClick={() => setMoreOpen(value => !value)}>{copy("更多", "More")} ▾</button>
         {moreOpen ? <div className={styles.morePopover}>
-          {([[copy("开发工具", "Development"), ["databases", "commands", "logs", "tree"]], [copy("自动化", "Automation"), ["scenarios", "voice"]], [copy("维护", "Maintenance"), ["diagnostics", "inputs"]]] as Array<[string, Array<typeof toolTab>]>).filter(([, tabs]) => tabs.some(tab => !hiddenWorkbenchTabs.has(tab))).map(([label, tabs]) => <section key={label}><strong>{label}</strong>{tabs.filter(tab => !hiddenWorkbenchTabs.has(tab)).map(tab => <button key={tab} type="button" onClick={() => changeToolTab(tab)}>{({ databases: copy("数据库", "Databases"), commands: copy("终端", "Terminal"), logs: copy("日志", "Logs"), tree: copy("界面结构", "UI tree"), scenarios: copy("自动化场景", "Scenarios"), voice: copy("语音验证", "Voice"), diagnostics: copy("诊断", "Diagnostics"), inputs: copy("校准", "Calibration") } as Record<string, string>)[tab]}</button>)}</section>)}
+          {([[copy("开发工具", "Development"), ["databases", "commands", "logs", "tree"]], [copy("自动化", "Automation"), ["scenarios", "voice"]], [copy("维护", "Maintenance"), ["diagnostics", "inputs"]]] as Array<[string, Array<typeof toolTab>]>).map(([label, tabs]) => <section key={label}><strong>{label}</strong>{tabs.map(tab => <button key={tab} type="button" onClick={() => changeToolTab(tab)}>{({ databases: copy("数据库", "Databases"), commands: copy("终端", "Terminal"), logs: copy("日志", "Logs"), tree: copy("界面结构", "UI tree"), scenarios: copy("自动化场景", "Scenarios"), voice: copy("语音验证", "Voice"), diagnostics: copy("诊断", "Diagnostics"), inputs: copy("校准", "Calibration") } as Record<string, string>)[tab]}</button>)}</section>)}
         </div> : null}
       </div>
       <button type="button" className={styles.tasksButton} onClick={() => changeToolTab("history")}>{copy("任务", "Tasks")}{tasksCount ? ` ${tasksCount}` : ""}</button>
       {lease || holder ? <button type="button" className={styles.stopButton} onClick={stopDevice} aria-label={copy("停止设备任务", "Stop device task")}>{copy("停止", "Stop")}</button> : null}
     </nav>
-    {toolTab === "mirror" && mirror?.open && mirror.presentation === "sidebar" ? <section className={styles.embeddedMirror} aria-label={copy("侧栏投屏", "Sidebar mirror")}><MirrorWindow embedded serial={selectedSerial} active={active && toolTab === "mirror"} /></section> : null}
-    <main className={styles.workbenchContent} data-tab={toolTab} hidden={toolTab === "mirror" && mirror?.open && mirror.presentation === "sidebar"}>
-      {toolTab === "mirror" ? <section className={styles.mirrorLanding}><div className={styles.mirrorIllustration}><AliIcon name="mobile" size={36} /></div><h2>{mirror?.open && mirror.presentation === "floating" ? copy("已在悬浮窗中投屏", "Mirror is open in a floating window") : copy("设备投屏", "Device mirror")}</h2><p>{selectedOnline ? copy("选择悬浮窗或面板内显示，专注查看设备画面。", "Choose a floating window or in-panel display.") : copy("连接鸿蒙设备并允许 USB 调试，随后开始投屏。", "Connect a Harmony device and allow USB debugging.")}</p><button className={styles.primaryButton} disabled={!selectedOnline} onClick={() => void openSelectedMirror()}>{copy("打开投屏", "Open mirror")}</button><button onClick={() => changeToolTab("overview")}>{copy("查看设备信息", "View device info")}</button></section> : null}
-      <div ref={drawerBodyRef} id={drawerId} role="tabpanel" aria-labelledby={`${drawerId}-${toolTab}`} className={styles.workbenchBody} hidden={toolTab === "mirror"} aria-label={copy("工具内容", "Tool content")}>
+    {mirror?.open && (mirror.presentation === "sidebar" || mirror.pendingPresentation === "sidebar") ? <section className={styles.embeddedMirror} style={{ flex: "1 1 0", maxHeight: "none", height: "auto", ...(mirror.presentation !== "sidebar" ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } as const : {}) }} aria-hidden={mirror.presentation !== "sidebar"} aria-label={copy("侧栏投屏", "Sidebar mirror")}><MirrorWindow key={mirror.serial} embedded serial={mirror.serial} active={active} /></section> : null}
+    <main hidden className={styles.workbenchContent} data-tab={toolTab}>
+      <div ref={drawerBodyRef} id={drawerId} role="tabpanel" aria-labelledby={`${drawerId}-${toolTab}`} className={styles.workbenchBody} aria-label={copy("工具内容", "Tool content")}>
         {toolTab === "overview" ? <section className={styles.overview}>
           <h2>{selected ? formatHarmonyDeviceLabel(selected) : copy("连接一台鸿蒙设备", "Connect a Harmony device")}</h2>
           <p>{selectedOnline ? copy("设备已连接。打开独立投屏，或使用顶部工具处理设备任务。", "Device connected. Open the mirror or choose a tool above.") : copy("通过 USB 连接手机并确认调试授权，也可以在设备设置中配置 Wi-Fi 连接。", "Connect by USB and allow debugging, or configure Wi-Fi in device settings.")}</p>
@@ -725,13 +718,12 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
           }}>{copy("放弃草稿", "Discard draft")}</button></section>)}
           <MediaHistory serial={selectedSerial} refreshKey={media.artifact?.filename} chinese={chinese} />
         </> : null}
-          {toolsVisited ? <WorkbenchTools key={selectedSerial} geometryId={geometryId} tab={toolTab === "mirror" ? "overview" : toolTab} serial={selectedSerial} active={active && toolTab !== "mirror"} chinese={chinese} canControl={canControl} ensureControl={ensureControl} onControlHandoff={clearControl} cwd={cwd} ownerId={ownerId} initialDatabaseId={databaseSelection} onOpenDatabase={hiddenWorkbenchTabs.has("databases") ? undefined : id => { setDatabaseSelection(id); changeToolTab("databases"); }} onOpenFiles={() => changeToolTab("files")} onShowTasks={() => changeToolTab("history")} onOpenLocalTerminal={onOpenLocalTerminal} onCleanupConfirmed={async () => { setError(null); await refresh(); }} /> : null}
+          {toolsVisited ? <WorkbenchTools key={selectedSerial} geometryId={geometryId} tab={toolTab} serial={selectedSerial} active={active} chinese={chinese} canControl={canControl} ensureControl={ensureControl} onControlHandoff={clearControl} cwd={cwd} ownerId={ownerId} initialDatabaseId={databaseSelection} onOpenDatabase={id => { setDatabaseSelection(id); changeToolTab("databases"); }} onOpenFiles={() => changeToolTab("files")} onShowTasks={() => changeToolTab("history")} onOpenLocalTerminal={onOpenLocalTerminal} onCleanupConfirmed={async () => { setError(null); await refresh(); }} /> : null}
           {toolTab === "logs" ? <HarmonyLogViewer active={active} serial={selectedSerial} online={Boolean(selectedOnline)} copy={copy} /> : null}
-          {toolTab === "tree" ? <UiInspector key={selectedSerial} serial={selectedSerial} online={Boolean(selectedOnline)} active={active} chinese={chinese} /> : null}
-          {toolTab === "diagnostics" ? <div className={styles.moreBody}>
+          {toolTab === "diagnostics" || toolTab === "tree" ? <div className={styles.moreBody}>
             <button type="button" disabled={!canControl || busy} onClick={() => void initializeMirror()}>{copy("初始化投屏服务", "Initialize video service")}</button>
             <button type="button" disabled={!selectedOnline || busy} onClick={() => void openSelectedMirror()}>{copy("打开投屏", "Open mirror")}</button>
-            <button type="button" disabled={!selectedOnline || busy || !selected?.capabilities.uiTree} onClick={() => changeToolTab("tree")}>{copy("读取界面结构", "Read interface structure")}</button>
+            <button type="button" disabled={!selectedOnline || busy || !selected?.capabilities.uiTree} onClick={() => void run(() => jsonRequest<{ snapshot: unknown }>(`/api/harmony/tree?serial=${encodeURIComponent(selectedSerial)}`), payload => setTree(payload.snapshot))}>{copy("读取界面结构", "Read interface structure")}</button>
             <details className={styles.diagnostics}><summary>{copy("开发者信息", "Developer details")}</summary><pre>{JSON.stringify({ selected, holder, snapshot, diagnostics, tree }, null, 2)}</pre></details>
             <button className={styles.stopButton} type="button" disabled={busy} onClick={() => { clearControl(); void run(() => jsonRequest("/api/harmony/action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "emergency_stop", reason: "desktop-global-stop" }) })); }}>{copy("停止所有设备操作", "Stop all devices")}</button>
           </div> : null}
