@@ -85,7 +85,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: node scripts/check-redesign.mjs
-      - run: node scripts/check-inspector.mjs
+      - run: node --test tests/inspector.test.mjs
 
       - name: Pack dsh-plugin-harmony.tgz
         shell: bash
