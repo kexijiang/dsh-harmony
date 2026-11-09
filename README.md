@@ -92,6 +92,19 @@ npm run install:dsh
 
 `dsh.client.platform: web` 是 NEXT 对 Electron 渲染器使用的插件标识；本项目面向 NEXT 桌面，无需启动 `dsh web`。其页面通过 `dsh-app://app/harmony/` 和原生认证代理访问后台。
 
+## 发布
+
+发行包在 GitHub Actions 上构建，并作为 GitHub Release 的附件发布。安装仍使用 Release 里的 `dsh-plugin-harmony.tgz`。把 `package.json` 的 `version` 改为新版本，并在 [CHANGELOG.md](CHANGELOG.md) 增加同名小节，例如 `## 0.4.3 - 2026-11-09`。标签是 `v` 加上该版本。
+
+```powershell
+git tag v0.4.3
+git push origin v0.4.3
+```
+
+推送 `v*` 标签会运行 [`.github/workflows/release.yml`](.github/workflows/release.yml)。它在 `windows-latest` 上执行与 Check 相同的 `npm run check`、`node scripts/check-redesign.mjs` 和 `node scripts/check-inspector.mjs`。通过后用 `npm pack` 生成安装包，附件名为 `dsh-plugin-harmony.tgz`，并附带可用 `sha256sum -c` 核对的 `dsh-plugin-harmony.tgz.sha256`。Release 说明使用 CHANGELOG 里该版本的小节；没有对应小节时使用 GitHub 生成的说明。标签包含 `-alpha`、`-beta` 或 `-rc` 时标记为预发布。
+
+工作流使用仓库自带的 `GITHUB_TOKEN`。远程需要已经有这个标签，且标签版本与 `package.json` 一致，否则工作流失败。需要补跑时，在 Actions 里手动运行 Release，输入已有标签，例如 `v0.4.3`。手动运行会检出该标签；标签上的提交需要包含这条 workflow。
+
 ## 来源与许可
 
 MIT。`vendor/piora` 是所需 Piora 快照，构建和运行无需原 Piora 工程。来源提交见 [provenance.json](vendor/provenance.json)，适配说明见 [ADAPTATIONS.md](vendor/ADAPTATIONS.md)，第三方组件声明见 [NOTICE.md](NOTICE.md)。

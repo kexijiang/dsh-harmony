@@ -1,0 +1,132 @@
+# Build dsh-plugin-harmony.tgz on the same Windows runner as Check, then publish a GitHub Release.
+# Does not create git tags and does not publish to npm. The tag must already exist.
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to publish, such as v0.4.3. It must match package.json version."
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tag || github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Check, pack, and publish
+    runs-on: windows-latest
+    steps:
+      - name: Resolve tag
+        id: tag
+        shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_TAG: ${{ github.event.inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == "workflow_dispatch" ]]; then
+            tag="$INPUT_TAG"
+          else
+            tag="$REF_NAME"
+          fi
+          tag="${tag//$'\r'/}"
+          tag="${tag#"${tag%%[![:space:]]*}"}"
+          tag="${tag%"${tag##*[![:space:]]}"}"
+          if [[ -z "$tag" || "$tag" != v*.*.* || "$tag" == *".."* || "$tag" == *[![:alnum:].-]* ]]; then
+            echo "::error::Tag '${tag}' is not a vX.Y.Z release tag. Enter an existing tag such as v0.4.3 or v0.5.0-rc.1."
+            exit 1
+          fi
+          printf 'tag=%s\n' "$tag" >> "$GITHUB_OUTPUT"
+
+      - name: Require an existing tag and no release yet
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: "1"
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: |
+          set -euo pipefail
+          if ! gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${TAG}" > /dev/null; then
+            echo "::error::Tag ${TAG} does not exist on the remote. Push the tag first. This workflow does not create tags."
+            exit 1
+          fi
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json tagName > /dev/null 2>&1; then
+            echo "::error::GitHub Release ${TAG} already exists and will not be overwritten. Delete that draft or release before running this workflow again."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ steps.tag.outputs.tag }}
+
+      - name: Verify tag matches package.json
+        id: release
+        shell: bash
+        env:
+          TAG: ${{ steps.tag.outputs.tag }}
+        run: node scripts/release-metadata.mjs verify "$TAG" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      # Same checks as .github/workflows/check.yml, on the tree that will be packed.
+      - run: npm ci
+      - run: npm run check
+      - run: node scripts/check-redesign.mjs
+      - run: node scripts/check-inspector.mjs
+
+      - name: Pack dsh-plugin-harmony.tgz
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          npm pack --json --pack-destination artifacts > artifacts/npm-pack.json
+          node scripts/release-metadata.mjs finalize-pack artifacts/npm-pack.json
+
+      - name: Read CHANGELOG notes
+        id: notes
+        shell: bash
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: node scripts/release-metadata.mjs notes "$TAG" artifacts/release-notes.md >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_PROMPT_DISABLED: "1"
+          TAG: ${{ steps.release.outputs.tag }}
+          PRERELEASE: ${{ steps.release.outputs.prerelease }}
+          NOTES_FILE: ${{ steps.notes.outputs.notes_file }}
+        run: |
+          set -euo pipefail
+          args=(
+            release create "$TAG"
+            artifacts/dsh-plugin-harmony.tgz
+            artifacts/dsh-plugin-harmony.tgz.sha256
+            --repo "$GITHUB_REPOSITORY"
+            --verify-tag
+            --title "$TAG"
+          )
+          if [[ "$PRERELEASE" == "true" ]]; then
+            args+=(--prerelease --latest=false)
+          fi
+          if [[ -n "$NOTES_FILE" ]]; then
+            args+=(--notes-file "$NOTES_FILE")
+          else
+            echo "CHANGELOG has no section for ${TAG}; generating release notes."
+            args+=(--generate-notes)
+          fi
+          gh "${args[@]}"
