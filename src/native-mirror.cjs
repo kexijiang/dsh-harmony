@@ -10,7 +10,7 @@ function resize() {
   if (!window || !geometry) return;
   const bounds = screen.getDisplayMatching(window.getBounds()).workAreaSize;
   const height = Math.round(Math.min(bounds.height - 100, 720 * state.scale / 100));
-  const width = Math.max(240, Math.min(bounds.width - 80, Math.round((height - 42) * geometry.width / geometry.height)));
+  const width = Math.max(240, Math.min(bounds.width - 80, Math.round((height - (geometry.chromeHeight || 84)) * geometry.width / geometry.height)));
   window.setSize(width, height);
 }
 process.on('message', async message => {
@@ -44,7 +44,7 @@ process.on('message', async message => {
       if (pinChanged) setPinned(state.alwaysOnTop);
       if (scaleChanged) resize();
     } else if (message.type === 'geometry') {
-      if (!geometry || geometry.width !== message.width || geometry.height !== message.height) {geometry = message; resize();}
+      if (!geometry || geometry.width !== message.width || geometry.height !== message.height || geometry.chromeHeight !== message.chromeHeight) {geometry = message; resize();}
     } else if (message.type === 'hide') window?.hide();
     else if (message.type === 'focus') {window?.show(); window?.moveTop(); window?.focus();}
     else if (message.type === 'menu') Menu.buildFromTemplate([

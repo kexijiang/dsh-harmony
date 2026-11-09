@@ -2,6 +2,8 @@
 
 将 [Piora](https://github.com/kexijiang/Piora) 的鸿蒙设备工作台与 Agent 操作能力带到 **DSH NEXT 桌面版**。通过 **Better Sidebar** 注册右侧“鸿蒙设备”Tab，同时支持独立悬浮投屏。
 
+当前版本 **0.4.2**：投屏与控制同步 Piora beta.15；采用常驻触控通道、简化控制栏和高位空闲端口。50ms 操作反馈目标尚未达到，详见 [更新说明](CHANGELOG.md)。
+
 ## 功能
 
 - 侧栏投屏与 Windows 悬浮窗相互切换；悬浮窗可置顶、缩放和拖动。

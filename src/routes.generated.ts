@@ -26,21 +26,22 @@ import * as route24 from '@piora/app/api/harmony/media/history/route.ts';
 import * as route25 from '@piora/app/api/harmony/media/preview/route.ts';
 import * as route26 from '@piora/app/api/harmony/media/route.ts';
 import * as route27 from '@piora/app/api/harmony/packages/route.ts';
-import * as route28 from '@piora/app/api/harmony/privileges/route.ts';
-import * as route29 from '@piora/app/api/harmony/profile/route.ts';
-import * as route30 from '@piora/app/api/harmony/runtime-candidates/route.ts';
-import * as route31 from '@piora/app/api/harmony/scenario/preview/route.ts';
-import * as route32 from '@piora/app/api/harmony/scenario/route.ts';
-import * as route33 from '@piora/app/api/harmony/sqlite/route.ts';
-import * as route34 from '@piora/app/api/harmony/state/route.ts';
-import * as route35 from '@piora/app/api/harmony/support/route.ts';
-import * as route36 from '@piora/app/api/harmony/tasks/route.ts';
-import * as route37 from '@piora/app/api/harmony/templates/route.ts';
-import * as route38 from '@piora/app/api/harmony/transfers/route.ts';
-import * as route39 from '@piora/app/api/harmony/tree/route.ts';
-import * as route40 from '@piora/app/api/harmony/validate/route.ts';
-import * as route41 from '@piora/app/api/harmony/video/route.ts';
-import * as route42 from '@piora/app/api/harmony/vision-models/route.ts';
+import * as route28 from '@piora/app/api/harmony/pointer/route.ts';
+import * as route29 from '@piora/app/api/harmony/privileges/route.ts';
+import * as route30 from '@piora/app/api/harmony/profile/route.ts';
+import * as route31 from '@piora/app/api/harmony/runtime-candidates/route.ts';
+import * as route32 from '@piora/app/api/harmony/scenario/preview/route.ts';
+import * as route33 from '@piora/app/api/harmony/scenario/route.ts';
+import * as route34 from '@piora/app/api/harmony/sqlite/route.ts';
+import * as route35 from '@piora/app/api/harmony/state/route.ts';
+import * as route36 from '@piora/app/api/harmony/support/route.ts';
+import * as route37 from '@piora/app/api/harmony/tasks/route.ts';
+import * as route38 from '@piora/app/api/harmony/templates/route.ts';
+import * as route39 from '@piora/app/api/harmony/transfers/route.ts';
+import * as route40 from '@piora/app/api/harmony/tree/route.ts';
+import * as route41 from '@piora/app/api/harmony/validate/route.ts';
+import * as route42 from '@piora/app/api/harmony/video/route.ts';
+import * as route43 from '@piora/app/api/harmony/vision-models/route.ts';
 export const routes = {"/api/harmony/action": route0,
 "/api/harmony/apps": route1,
 "/api/harmony/audio": route2,
@@ -69,18 +70,19 @@ export const routes = {"/api/harmony/action": route0,
 "/api/harmony/media/preview": route25,
 "/api/harmony/media": route26,
 "/api/harmony/packages": route27,
-"/api/harmony/privileges": route28,
-"/api/harmony/profile": route29,
-"/api/harmony/runtime-candidates": route30,
-"/api/harmony/scenario/preview": route31,
-"/api/harmony/scenario": route32,
-"/api/harmony/sqlite": route33,
-"/api/harmony/state": route34,
-"/api/harmony/support": route35,
-"/api/harmony/tasks": route36,
-"/api/harmony/templates": route37,
-"/api/harmony/transfers": route38,
-"/api/harmony/tree": route39,
-"/api/harmony/validate": route40,
-"/api/harmony/video": route41,
-"/api/harmony/vision-models": route42};
+"/api/harmony/pointer": route28,
+"/api/harmony/privileges": route29,
+"/api/harmony/profile": route30,
+"/api/harmony/runtime-candidates": route31,
+"/api/harmony/scenario/preview": route32,
+"/api/harmony/scenario": route33,
+"/api/harmony/sqlite": route34,
+"/api/harmony/state": route35,
+"/api/harmony/support": route36,
+"/api/harmony/tasks": route37,
+"/api/harmony/templates": route38,
+"/api/harmony/transfers": route39,
+"/api/harmony/tree": route40,
+"/api/harmony/validate": route41,
+"/api/harmony/video": route42,
+"/api/harmony/vision-models": route43};

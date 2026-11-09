@@ -19,3 +19,7 @@
 原生窗口及鉴权端点由 src/native-mirror.ts 和 src/native-mirror.cjs 实现。它们不依赖 Piora Electron 主进程，窗口隐藏时停止画面订阅，插件卸载时关闭窗口和本地服务。
 
 重新从上游导入时应保留/重新应用这些适配，并执行完整的定向检查。
+
+## 2026-11-09 投屏同步
+
+基于 Piora a710777f487f69eb2a7e055b4390950f8cebf2e2（beta.15）更新投屏、常驻 DOWN/MOVE/UP 控制、单次物理按键和高位端口分配。保留此前 DSH 的 HarmonyPanel、设置抽屉、tree API、device-files 及传输/数据库任务 dispose 适配。provenance 标识导入基线，快照包含这些局部适配。独立窗口按报告的工具栏高度适配宽高。50ms 操作反馈目标尚未达到；本插件尚无真实手机和最终宿主安装验收。

@@ -1,3 +1,4 @@
+import { allocatePioraPort } from '@piora/lib/harmony/runtime/local-port';
 import { createServer, type Server } from 'node:http';
 import { spawn, type ChildProcess } from 'node:child_process';
 import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
@@ -46,7 +47,8 @@ export class NativeMirror {
         if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) { res.writeHead(403); res.end(); return; }
         void handler(req, res);
       });
-      await new Promise<void>((resolve, reject) => { this.server!.once('error', reject); this.server!.listen(0, '127.0.0.1', resolve); });
+      const port = await allocatePioraPort();
+      await new Promise<void>((resolve, reject) => { this.server!.once('error', reject); this.server!.listen(port, '127.0.0.1', resolve); });
       const address = this.server.address() as {port:number};
       this.origin = `http://127.0.0.1:${address.port}`;
       this.options.allowOrigin(this.origin);
@@ -101,7 +103,7 @@ export class NativeMirror {
       case 'reportFrame':
         if (value?.serial === this.state.serial && Number.isFinite(value.width) && Number.isFinite(value.height) && value.width > 0 && value.height > 0 && value.width < 10000 && value.height < 10000) {
           this.state.frame = {width:value.width,height:value.height};
-          this.child?.send({type:'geometry', width:value.width, height:value.height});
+          this.child?.send({type:'geometry', width:value.width, height:value.height, chromeHeight:Number.isFinite(value.chromeHeight) ? Math.max(36,Math.min(300,value.chromeHeight)) : 84});
         }
         break;
       default: throw new Error('Unknown mirror action');
