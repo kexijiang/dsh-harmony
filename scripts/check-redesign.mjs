@@ -20,6 +20,7 @@ try {
   await page.getByRole('tab',{name:'投屏',exact:true}).waitFor();
   await page.getByRole('heading',{name:'设备投屏',exact:true}).waitFor();
   assert.equal(await page.getByRole('heading',{name:'连接一台鸿蒙设备',exact:true}).count(),0);
+  assert.equal(await page.getByRole('heading',{name:'设备投屏',exact:true}).evaluate(e=>getComputedStyle(e.parentElement).display),'flex');
   await page.screenshot({path:'assets/panel-light.png'});
   await page.getByRole('tab',{name:'设备信息',exact:true}).click();
   await page.getByRole('heading',{name:'连接一台鸿蒙设备',exact:true}).waitFor();
