@@ -27,3 +27,7 @@
 ## 0.4.4 以当前 Piora 为准
 
 上述旧主面板、抽屉和样式适配已撤回；当前页面仅展示投屏/截图/录屏/操控。主面板、设置、悬浮窗和输入 Hook 原文件保持 beta.15 基线，基线散列测试防止再次混入旧布局。构建时仅将 Worker 构造替换为 DSH 渲染器兼容桥：复用同一 MirrorVideoEngine，不放宽 CSP 或认证；原生 codec 仍由 Chromium 执行。控制 Worker 的 IPC 构建适配为 JSON。旧文件树及检查器实现保留，但不再从主界面展示；历史 check-inspector 脚本仅适用于旧 UI，CI 使用 API/模型单元测试以及新的当前界面回归。
+
+### 操控与画面稳定性修复
+
+基线后的四处修复在 mirror-baseline.json 的 patches 中列明，原始上游散列保留：合并未完成的几何准备、未发送触控前的超时可恢复、状态提示不参与布局，以及静止/重复配置画面的新帧验证。实际触控结果不明仍停止，过期帧与旋转校验继续生效。tests/mirror-recovery 与 mirror-freshness 覆盖这些边界。

@@ -48,3 +48,8 @@
 @container (max-width: 240px) { .device { display: none; } .scale { margin-right: auto; } }
 @container (max-width: 180px) { .titlebar .scale, .titlebar .capture { display: none; } .record { margin-right: auto; } }
 @container (max-width: 110px) { .record { display: none !important; } .recording { margin-right: auto; } .titlebar { justify-content: flex-end; } }
+
+/* Transient reconnect/control notices must not resize the video or native window. */
+.connectionStatus { position: absolute; top: 36px; left: 1px; right: 1px; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 6px 10px; min-height: 30px; font-size: var(--text-xs); color: var(--text); background: var(--bg-panel); border-bottom: 1px solid var(--border); }
+.connectionStatus span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.connectionStatus button { border: 0; background: transparent; color: var(--accent); cursor: pointer; font: inherit; white-space: nowrap; }

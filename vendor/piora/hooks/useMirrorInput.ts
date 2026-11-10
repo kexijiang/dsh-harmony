@@ -24,7 +24,7 @@ export function useMirrorInput({ enabled, frame, chinese }: { enabled: boolean; 
   const wheelAt = useRef(0);
   const abort = useRef(new AbortController());
   type PreparedGeometry = { geometry: { geometryId: string; frameWidth: number; frameHeight: number } };
-  const prepared = useRef<{ epoch: number; at: number; request: Promise<PreparedGeometry> } | null>(null);
+  const prepared = useRef<{ epoch: number; at: number; pending: boolean; request: Promise<PreparedGeometry> } | null>(null);
   const identity = `${enabled}:${serial}:${frame?.generation}:${frame?.width}:${frame?.height}`;
   useEffect(() => {
     const controller = new AbortController();
@@ -39,10 +39,10 @@ export function useMirrorInput({ enabled, frame, chinese }: { enabled: boolean; 
 
   const prepareGeometry = () => {
     const cached = prepared.current;
-    if (cached?.epoch === epoch.current && performance.now() - cached.at < 300) return cached.request;
+    if (cached?.epoch === epoch.current && (cached.pending || performance.now() - cached.at < 300)) return cached.request;
     const request = harmonyJson<PreparedGeometry>(`/api/harmony/geometry?serial=${encodeURIComponent(serial)}&space=video`, undefined, abort.current.signal);
-    const entry = { epoch: epoch.current, at: performance.now(), request }; prepared.current = entry;
-    void request.catch(() => { if (prepared.current === entry) prepared.current = null; });
+    const entry = { epoch: epoch.current, at: performance.now(), pending: true, request }; prepared.current = entry;
+    void request.then(() => { entry.pending = false; entry.at = performance.now(); if (entry.epoch === epoch.current && !stopped.current) setError(null); }, () => { if (prepared.current === entry) prepared.current = null; });
     return request;
   };
 
@@ -118,9 +118,10 @@ export function useMirrorInput({ enabled, frame, chinese }: { enabled: boolean; 
         // Bound setup as well as the physical hold: a late lease/geometry reply
         // must not inject an old click after the user has moved on.
         const startup = AbortSignal.any([abort.current.signal, AbortSignal.timeout(3000)]);
-        let leaseToken: string | undefined, gestureId: string | undefined, releaseFailure: unknown;
+        let leaseToken: string | undefined, gestureId: string | undefined, releaseFailure: unknown, pointerSent = false;
         const fail = (cause: unknown) => {
           if (expected !== epoch.current) return;
+          if (!pointerSent) { gesture.current = null; setError(chinese ? "正在准备操控通道，请稍候再操作" : "Preparing device control; try again shortly"); return; }
           stopped.current = true; setError(cause instanceof Error ? cause.message : String(cause)); manual.clearControl();
         };
         const current = () => { if (expected !== epoch.current || stopped.current) throw new Error(chinese ? "设备状态已改变" : "Device state changed"); };
@@ -134,6 +135,7 @@ export function useMirrorInput({ enabled, frame, chinese }: { enabled: boolean; 
             startup.throwIfAborted();
             current(); leaseToken = token;
             if (geometry.frameWidth !== expectedFrame.width || geometry.frameHeight !== expectedFrame.height) throw new Error(chinese ? "屏幕方向已变化" : "Screen orientation changed");
+            pointerSent = true;
             const result = await harmonyJson<{ gestureId: string }>("/api/harmony/pointer", { phase, serial, leaseToken, x, y, geometryId: geometry.geometryId, generation: expectedFrame.generation }, startup);
             gestureId = result.gestureId;
           } else if (gestureId && leaseToken) {

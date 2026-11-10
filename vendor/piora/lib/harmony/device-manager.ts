@@ -1260,6 +1260,8 @@ export class HarmonyDeviceManager {
         if (!current()) return;
         // A new SPS/PPS can change the codec without changing pixel dimensions.
         this.videoConnectionFrames.delete(tracked);
+        const sameShape = dimensions?.width === width && dimensions?.height === height;
+        const previousFrame = this.frameCapturedAt.get(`${options.serial}:video`);
         dimensions = { width, height };
         this.recordFrameDimensions(options.serial, "video", width, height);
         const remaining = [...(this.videoConnections.get(options.serial) ?? [])]
@@ -1267,7 +1269,8 @@ export class HarmonyDeviceManager {
           .map(viewer => this.videoConnectionFrames.get(viewer))
           .filter(observation => observation?.width === width && observation?.height === height)
           .sort((left, right) => right!.capturedAt - left!.capturedAt)[0];
-        if (remaining) this.frameCapturedAt.set(`${options.serial}:video`, remaining);
+        if (sameShape && previousFrame?.generation === device.generation && previousFrame.width === width && previousFrame.height === height) this.frameCapturedAt.set(`${options.serial}:video`, previousFrame);
+        else if (remaining) this.frameCapturedAt.set(`${options.serial}:video`, remaining);
         else { this.frameCapturedAt.delete(`${options.serial}:video`); this.geometries.delete(`${options.serial}:video`); }
       }, () => {
         if (!current()) return;
@@ -1365,9 +1368,22 @@ export class HarmonyDeviceManager {
     this.recordFrameDimensions(serial, "screenshot", screenshot.width ?? 0, screenshot.height ?? 0);
   }
 
+  private async refreshPointerFrame(serial: string, generation: number, signal?: AbortSignal): Promise<void> {
+    if (!this.videoConnections.get(serial)?.size) return;
+    const fresh = () => { const frame = this.frameCapturedAt.get(serial + ":video"); const age = frame ? this.now() - frame.capturedAt : NaN; return frame?.generation === generation && Number.isFinite(age) && age >= 0 && age <= 750; };
+    if (fresh()) return;
+    this.requestVideoKeyframe(serial, generation);
+    const deadline = performance.now() + 800;
+    while (!fresh()) {
+      if (signal?.aborted || this.generations.get(serial) !== generation || performance.now() >= deadline) throw new HarmonyError("STALE_SNAPSHOT", "Wait for a fresh live frame before controlling the phone", { details: { dispatchState: "not-sent" } });
+      await new Promise(resolve => setTimeout(resolve, 10));
+    }
+  }
+
   async getFrameGeometry(serial: string, space: "video" | "screenshot", signal?: AbortSignal): Promise<HarmonyGeometry> {
     const device = await this.onlineDevice(serial, signal);
     const backend = this.requireBackend();
+    if (space === "video") await this.refreshPointerFrame(serial, device.generation, signal);
     if (!backend.displayGeometry) throw new HarmonyError("CAPABILITY_UNAVAILABLE", "Native display geometry is unavailable");
     const key = `${serial}:${space}`;
     const frame = this.frameDimensions.get(key);
@@ -1376,6 +1392,7 @@ export class HarmonyDeviceManager {
     const age = observation ? this.now() - observation.capturedAt : Number.NaN;
     if (!observation || observation.generation !== device.generation || !Number.isFinite(age) || age < 0 || age > 5000) throw new HarmonyError("STALE_SNAPSHOT", "The frame is stale; wait for live video or a new screenshot");
     const native = await backend.displayGeometry(serial, signal);
+    if (space === "video") await this.refreshPointerFrame(serial, device.generation, signal);
     const currentObservation = this.frameCapturedAt.get(key);
     const currentAge = currentObservation ? this.now() - currentObservation.capturedAt : Number.NaN;
     if (this.generations.get(serial) !== device.generation || currentObservation?.generation !== device.generation || this.frameDimensions.get(key) !== frame || !Number.isFinite(currentAge) || currentAge < 0 || currentAge > 5000) throw new HarmonyError("STALE_SNAPSHOT", "Frame geometry changed or expired during verification");

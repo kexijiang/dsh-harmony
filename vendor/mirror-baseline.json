@@ -8,6 +8,25 @@
     "components/workspace/harmony/MirrorWindow.tsx": "cfb994184812cbe154eff1cdd9bb9998fcd9840966d15de0ff335d2e31cb701c",
     "components/workspace/harmony/MirrorWindow.module.css": "4640add01936ec21385d21a1f8ab0feab840aa2f351fb04c4ff17d1a23c9eec3",
     "hooks/useHarmonyMirror.ts": "5549a9ddfa88f727881946fc158ee67cf1c4a2ab80fba4158e18dc9a24a47783",
-    "hooks/useMirrorInput.ts": "895a48e1173fb68057e4e3019ba18e0586bab1824de11677474c7b91f5dffeea"
+    "hooks/useMirrorInput.ts": "895a48e1173fb68057e4e3019ba18e0586bab1824de11677474c7b91f5dffeea",
+    "lib/harmony/device-manager.ts": "49143212f25758e1fadea67cd7c2211b5ca099d3ae5456af13dd69b2ee85b9c3"
+  },
+  "patches": {
+    "hooks/useMirrorInput.ts": {
+      "sha256": "d773da63e4cac664c89f0bb7e1f037dad90a4b58bc19ed44f3636ced380c5ca1",
+      "reason": "Coalesce in-flight initialization and allow retry only when no pointer request was sent."
+    },
+    "components/workspace/harmony/MirrorWindow.tsx": {
+      "sha256": "50102f2654c86265eb5747bf867ba5552e43387f20e24cc628928149ee94d78c",
+      "reason": "Render transient connection/control status outside video layout."
+    },
+    "components/workspace/harmony/MirrorWindow.module.css": {
+      "sha256": "c13c326e3aafd0225f974114b2a86d89c27c414312885ec1574c72380877f0fc",
+      "reason": "Keep video and native window bounds fixed when transient status appears."
+    },
+    "lib/harmony/device-manager.ts": {
+      "sha256": "89971a7b0354a71e4706a8fd8306bb4183c0f344552a7a82045193ff4094fc69",
+      "reason": "Refresh idle video with an actual keyframe and retain same-shape geometry on repeated configuration; stale or resized frames still reject input."
+    }
   }
 }

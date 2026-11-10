@@ -109,7 +109,7 @@ export function MirrorWindow({ embedded = false, serial: embeddedSerial, active 
         <button disabled={Boolean(media.busy)} onClick={() => { void media.action("retry_recording_save", draft.recordingId); }}>{copy("重试保存", "Retry save")}</button>
       </div>)}
     </details> : null}
-    {live.error || input.error ? <div className={styles.compatibility} role="status"><span>{input.error ?? live.error}</span><button onClick={() => { setControlEnabled(true); live.refresh(); }}>{copy("重新连接", "Reconnect")}</button></div> : null}
+    {live.error || input.error ? <div className={styles.connectionStatus} role="status"><span>{input.error ?? live.error}</span><button onClick={() => { setControlEnabled(true); live.refresh(); }}>{copy("重新连接", "Reconnect")}</button></div> : null}
     <main ref={screenRef} className={styles.screen} data-zoomed={zoom !== "fit"}>
       <div ref={live.surfaceRef} className={styles.surface} tabIndex={controlEnabled ? 0 : -1} aria-label={copy("投屏交互区域", "Mirror interaction area")} data-interactive={controlEnabled}
         style={zoom !== "fit" && width && height ? { width: width * Number(zoom), height: height * Number(zoom), flex: "none" } : undefined} {...input.handlers} />

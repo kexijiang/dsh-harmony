@@ -71,6 +71,7 @@ const sourcePlugin = { name: 'piora-source', setup(build) {
 const base = { bundle: true, logLevel: 'warning', plugins: [sourcePlugin], nodePaths: [join(root, 'node_modules')], target: 'es2022', jsx: 'automatic', legalComments: 'eof' };
 await build({ ...base, entryPoints: [join(root, 'src/index.ts')], outfile: join(dist, 'index.js'), platform: 'node', format: 'esm', packages: 'external', banner: { js: "import { createRequire as __createRequire } from 'node:module'; const require = __createRequire(import.meta.url);" } });
 await build({ ...base, entryPoints: [join(source, 'lib/harmony/runtime/worker-entry.ts')], outfile: join(dist, '.harmony-worker/harmony/runtime/worker-entry.js'), platform: 'node', format: 'esm', packages: 'external' });
+await build({ ...base, entryPoints: [join(source,'lib/harmony/device-manager.ts')], outfile:join(root,'.verification/device-manager.mjs'), platform:'node', format:'esm', packages:'external' });
 const videoWorker=await build({ ...base, entryPoints: [join(source, 'lib/harmony/mirror/video.worker.ts')], platform:'browser', format:'esm', minify:true, write:false });
 await writeFile(join(dist,'video.worker.js'),videoWorker.outputFiles[0].text);
 await build({ ...base, entryPoints: [join(root, 'src/panel.tsx')], outfile: join(dist, 'panel.js'), platform: 'browser', format: 'esm', minify: true, define: { 'process.env.NODE_ENV': '"production"' }, loader: { '.woff2': 'dataurl', '.svg': 'dataurl' } });
