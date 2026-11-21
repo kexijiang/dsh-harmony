@@ -17,10 +17,12 @@ import dynamic from "next/dynamic";
 import { formatHarmonyDeviceLabel, formatHarmonyDeviceTitle, rememberHarmonyDeviceIdentity, type HarmonyDeviceLabelSource } from "@/lib/harmony/device-label";
 import { currentHarmonyResponseSample, normalizeHarmonyResponseSample, type HarmonyResponseSample } from "@/lib/harmony/device-connection";
 import { HarmonyRequestError } from "@/lib/harmony/request-error";
+import { subscribeHarmonyEvents } from "@/lib/harmony/event-source";
 import { AliIcon } from "../AliIcon";
 import { HarmonyLogViewer } from "./HarmonyLogViewer";
 const MirrorWindow = dynamic(() => import("./harmony/MirrorWindow").then(module => module.MirrorWindow), { ssr: false });
 const WorkbenchTools = dynamic(() => import("./harmony/WorkbenchTools").then(module => module.WorkbenchTools), { ssr: false });
+const HarmonyLogWorkbench = dynamic(() => import("./harmony/HarmonyLogWorkbench").then(module => module.HarmonyLogWorkbench), { ssr: false });
 import { MediaHistory } from "./harmony/MediaHistory";
 import { TcpDeviceConnection } from "./harmony/TcpDeviceConnection";
 import styles from "./HarmonyPanel.module.css";
@@ -183,6 +185,7 @@ type HarmonyPanelProps = {
   onMaximizedChange?: (maximized: boolean) => void;
   sessionRunning?: boolean;
   cwd?: string | null;
+  sessionId?: string | null;
   onOpenLocalTerminal?: () => void;
   onGuideAgent?: ((prompt?: string) => void) | undefined;
   onSnapshot?: (fingerprint: number) => void;
@@ -190,7 +193,7 @@ type HarmonyPanelProps = {
 
 
 
-export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd, onOpenLocalTerminal, onSnapshot }: HarmonyPanelProps) {
+export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd, sessionId, onGuideAgent, onOpenLocalTerminal, onSnapshot }: HarmonyPanelProps) {
   const { locale } = useI18n();
   const chinese = locale === "zh-CN";
   const copy = useCallback((zh: string, en: string) => chinese ? zh : en, [chinese]);
@@ -210,9 +213,6 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
   const [managerState, setManagerState] = useState<HarmonyState | null>(null);
   const [selectedSerial, setSelectedSerial] = useState("");
   const [sdkPath, setSdkPath] = useState("");
-  const [videoProvider, setVideoProvider] = useState<"deveco" | "bundled" | "hos-scrcpy">("deveco");
-  const [hosPackageDirectory, setHosPackageDirectory] = useState("");
-  const [javaPath, setJavaPath] = useState("");
   const [runtimeCandidates, setRuntimeCandidates] = useState<RuntimeCandidate[]>([]);
   const [visionModels, setVisionModels] = useState<VisionModel[]>([]);
   const [visionEnabled, setVisionEnabled] = useState(false);
@@ -223,6 +223,8 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
   const [databaseSelection, setDatabaseSelection] = useState("");
 
   const [toolsVisited, setToolsVisited] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  const [logsOpened, setLogsOpened] = useState(false);
   const drawerId = useId();
 
   const drawerBodyRef = useRef<HTMLDivElement>(null);
@@ -270,8 +272,12 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
   });
   const mirror = useHarmonyWindow();
   useEffect(() => {
-    if (mirror?.open && mirror.presentation === "sidebar" && mirror.serial) setSelectedSerial(mirror.serial);
-  }, [mirror?.open, mirror?.presentation, mirror?.serial]);
+    if (!mirror?.open || (mirror.pendingPresentation ?? mirror.presentation) !== "sidebar") return;
+    if (mirror.serial) setSelectedSerial(mirror.serial);
+    // Reveal the destination before it acknowledges its first frame. Keep the
+    // dependency list on handoff identity so ordinary updates preserve logs.
+    setShowLogs(false);
+  }, [mirror?.open, mirror?.presentation, mirror?.pendingPresentation, mirror?.serial]);
   const [mirrorPresentation, setMirrorPresentation] = useState<"floating" | "sidebar">("floating");
   useEffect(() => { if (mirror?.presentation) setMirrorPresentation(mirror.pendingPresentation ?? mirror.presentation); }, [mirror?.presentation, mirror?.pendingPresentation]);
   const openSelectedMirror = async () => {
@@ -377,10 +383,6 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       const candidates = normalizeRuntimeCandidates(payload?.candidates);
       setRuntimeCandidates(candidates);
       setSdkPath(optionalString(config?.hdcPath) ?? diagnostics.runtime.hdcPath ?? candidates[0]?.hdcPath ?? "");
-      const video = recordOf(config?.video);
-      setVideoProvider(video?.provider === "hos-scrcpy" ? "hos-scrcpy" : video?.provider === "bundled" ? "bundled" : "deveco");
-      setHosPackageDirectory(optionalString(video?.packageDirectory) ?? "");
-      setJavaPath(optionalString(video?.javaPath) ?? "");
       setVisionModels(normalizeVisionModels(modelPayload?.models));
       const vision = recordOf(config?.vision);
       const provider = optionalString(vision?.provider);
@@ -407,8 +409,7 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       if (!disposed) pollTimer = window.setTimeout(() => { void poll(); }, 5_000);
     };
     void poll();
-    const source = new EventSource("/api/harmony/events");
-    source.onmessage = (event) => {
+    const unsubscribe = subscribeHarmonyEvents((event) => {
       try {
         const metadata = recordOf(JSON.parse(event.data));
         if (!metadata) return;
@@ -426,11 +427,10 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       } catch {
         // A malformed metadata event cannot affect the device command path.
       }
-    };
-    source.onerror = () => { /* Polling below remains the recovery path. */ };
+    });
     return () => {
       disposed = true;
-      source.close();
+      unsubscribe();
       pollController?.abort();
       if (pollTimer !== undefined) window.clearTimeout(pollTimer);
     };
@@ -472,23 +472,6 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
     });
   }, [copy, run]);
 
-  const action = (input: Record<string, unknown>) => {
-    if (!selectedSerial || !canControl) return Promise.resolve(undefined);
-    return run(async () => {
-      const leaseToken = await ensureControl();
-      return jsonRequest("/api/harmony/action", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ serial: selectedSerial, leaseToken, ...input }),
-      });
-    });
-  };
-
-  const initializeMirror = async () => {
-    const result = await action({ action: "initialize_mirror" });
-    if (result === undefined) return;
-    await showPioraMessage({ title: copy("启用实时投屏", "Enable live video"), message: copy("请在手机上开始共享屏幕并确认授权，然后重新打开投屏。", "Start sharing on the phone and confirm consent, then reopen the mirror."), actions: [{ id: "done", label: copy("确定", "OK"), primary: true }] });
-  };
-
   useEffect(() => {
     if (!active || !canScreenshot || !screenshotBinding) return;
     const shortcut = (event: KeyboardEvent) => {
@@ -518,7 +501,7 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         hdcPath: sdkPath.trim() || null,
-        video: { provider: videoProvider, ...(videoProvider === "hos-scrcpy" ? { packageDirectory: hosPackageDirectory.trim(), ...(javaPath.trim() ? { javaPath: javaPath.trim() } : {}) } : {}) },
+        video: { provider: "bundled" },
         vision: visionEnabled ? { enabled: true, provider, modelId, shareScreenshotWithActionModel: shareScreenshot } : null,
       }),
     });
@@ -607,6 +590,14 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       </div>
     </header>
 
+    <nav className={styles.devicePageTabs} aria-label={copy("鸿蒙设备页面", "Harmony device pages")}>
+      <button type="button" aria-pressed={!showLogs} onClick={() => setShowLogs(false)}>{copy("设备", "Device")}</button>
+      <button type="button" aria-pressed={showLogs} onClick={() => { setLogsOpened(true); setShowLogs(true); }}>{copy("日志工作台", "Log workbench")}</button>
+    </nav>
+    {logsOpened ? <div className={styles.logWorkbenchPage} hidden={!showLogs}>
+      <HarmonyLogWorkbench active={active && showLogs} serial={selectedSerial} online={Boolean(selectedOnline)} sessionId={sessionId} onDraft={onGuideAgent} copy={copy} />
+    </div> : null}
+
     {settingsOpen ? <HarmonySettingsSurface onClose={() => setSettingsOpen(false)} title={copy("设备设置", "Device settings")}><section className={styles.settingsPanel} aria-label={copy("设备设置", "Device settings")}>
       <div className={styles.settingsHeading}>
         <span><strong>{copy("设备设置", "Device settings")}</strong><small>{copy("通常只需设置一次", "Usually a one-time setup")}</small></span>
@@ -636,16 +627,8 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
             : copy("当前设备的连接方式未知；HDC 未给出可核实的标记", "Connection type unknown; HDC did not provide a verifiable marker")}</p> : null}
       </div>
 
-      <div hidden className={styles.settingGroup}>
-        <div className={styles.settingCopy}><strong>{copy("投屏来源", "Video provider")}</strong><small>{copy("默认复用 DevEco 实时视频；锁屏与解锁使用同一通道，侧栏与悬浮窗保持一致。需要兼容的 DevEco 服务与已授权的 HDC 连接。", "Use DevEco live video by default, with the same stream while locked or unlocked in both docked and floating views. Requires a compatible DevEco service and authorized HDC connection.")}</small></div>
-        <select aria-label={copy("投屏来源", "Video provider")} value={videoProvider} onChange={event => setVideoProvider(event.target.value as "deveco" | "bundled" | "hos-scrcpy")}>
-          <option value="deveco">{copy("原生实时视频（内置，无需 DevEco）", "Native live video (built in, no DevEco required)")}</option><option value="bundled">{copy("旧版自动兼容（可回退手机组件）", "Legacy automatic (allow phone component fallback)")}</option><option value="hos-scrcpy">HOScrcpy</option>
-        </select>
-        {videoProvider === "hos-scrcpy" ? <>
-          <label>{copy("本地 dsh-hos-scrcpy 包目录", "Local dsh-hos-scrcpy package directory")}<input value={hosPackageDirectory} onChange={event => setHosPackageDirectory(event.target.value)} /></label>
-          <label>{copy("Java 可执行文件完整路径（留空使用 PATH）", "Full Java executable path (blank uses PATH)")}<input value={javaPath} onChange={event => setJavaPath(event.target.value)} /></label>
-          <p className={styles.inlineHint}>{copy("需自行提供含 HOScrcpy SDK jar 和 Java sidecar 的本地包。Piora 只经已认证的设备视频接口转发画面，不向网页暴露 sidecar 地址；首次开流可能部署其设备组件。", "Supply a local package containing the HOScrcpy SDK jar and Java sidecar. Piora proxies video only through its authenticated device endpoint and does not expose the sidecar address to the browser; first capture may deploy its device component.")}</p>
-        </> : null}
+      <div className={styles.settingGroup}>
+        <div className={styles.settingCopy}><strong>{copy("内置实时投屏", "Built-in live video")}</strong><small>{copy("使用 Piora 随附的原生投屏库，连接已授权的 HDC 设备即可观看和录屏。", "View and record through Piora's bundled native video library with an authorized HDC connection.")}</small></div>
       </div>
 
       <div hidden className={styles.settingGroup}>
@@ -699,7 +682,7 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
       <button type="button" className={styles.tasksButton} onClick={() => changeToolTab("history")}>{copy("任务", "Tasks")}{tasksCount ? ` ${tasksCount}` : ""}</button>
       {lease || holder ? <button type="button" className={styles.stopButton} onClick={stopDevice} aria-label={copy("停止设备任务", "Stop device task")}>{copy("停止", "Stop")}</button> : null}
     </nav>
-    {mirror?.open && (mirror.presentation === "sidebar" || mirror.pendingPresentation === "sidebar") ? <section className={styles.embeddedMirror} style={{ flex: "1 1 0", maxHeight: "none", height: "auto", ...(mirror.presentation !== "sidebar" ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } as const : {}) }} aria-hidden={mirror.presentation !== "sidebar"} aria-label={copy("侧栏投屏", "Sidebar mirror")}><MirrorWindow key={mirror.serial} embedded serial={mirror.serial} active={active} /></section> : null}
+    {mirror?.open && (mirror.presentation === "sidebar" || mirror.pendingPresentation === "sidebar") ? <section className={styles.embeddedMirror} style={{ flex: "1 1 0", maxHeight: "none", height: "auto", ...(showLogs ? { display: "none" } : {}), ...(mirror.presentation !== "sidebar" ? { position: "absolute", visibility: "hidden", pointerEvents: "none" } as const : {}) }} aria-hidden={showLogs || mirror.presentation !== "sidebar"} aria-label={copy("侧栏投屏", "Sidebar mirror")}><MirrorWindow key={mirror.serial} embedded serial={mirror.serial} active={active} /></section> : null}
     <main hidden className={styles.workbenchContent} data-tab={toolTab}>
       <div ref={drawerBodyRef} id={drawerId} role="tabpanel" aria-labelledby={`${drawerId}-${toolTab}`} className={styles.workbenchBody} aria-label={copy("工具内容", "Tool content")}>
         {toolTab === "overview" ? <section className={styles.overview}>
@@ -721,7 +704,6 @@ export function HarmonyPanel({ active, maximized = false, onMaximizedChange, cwd
           {toolsVisited ? <WorkbenchTools key={selectedSerial} geometryId={geometryId} tab={toolTab} serial={selectedSerial} active={active} chinese={chinese} canControl={canControl} ensureControl={ensureControl} onControlHandoff={clearControl} cwd={cwd} ownerId={ownerId} initialDatabaseId={databaseSelection} onOpenDatabase={id => { setDatabaseSelection(id); changeToolTab("databases"); }} onOpenFiles={() => changeToolTab("files")} onShowTasks={() => changeToolTab("history")} onOpenLocalTerminal={onOpenLocalTerminal} onCleanupConfirmed={async () => { setError(null); await refresh(); }} /> : null}
           {toolTab === "logs" ? <HarmonyLogViewer active={active} serial={selectedSerial} online={Boolean(selectedOnline)} copy={copy} /> : null}
           {toolTab === "diagnostics" || toolTab === "tree" ? <div className={styles.moreBody}>
-            <button type="button" disabled={!canControl || busy} onClick={() => void initializeMirror()}>{copy("初始化投屏服务", "Initialize video service")}</button>
             <button type="button" disabled={!selectedOnline || busy} onClick={() => void openSelectedMirror()}>{copy("打开投屏", "Open mirror")}</button>
             <button type="button" disabled={!selectedOnline || busy || !selected?.capabilities.uiTree} onClick={() => void run(() => jsonRequest<{ snapshot: unknown }>(`/api/harmony/tree?serial=${encodeURIComponent(selectedSerial)}`), payload => setTree(payload.snapshot))}>{copy("读取界面结构", "Read interface structure")}</button>
             <details className={styles.diagnostics}><summary>{copy("开发者信息", "Developer details")}</summary><pre>{JSON.stringify({ selected, holder, snapshot, diagnostics, tree }, null, 2)}</pre></details>

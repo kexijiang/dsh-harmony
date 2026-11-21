@@ -14,6 +14,8 @@ interface IconDef {
   stroke?: readonly string[];
   /** Filled paths — solid `currentColor`, no stroke. */
   fill?: readonly string[];
+  /** Native circles keep Git nodes centered inside the 24×24 viewBox. */
+  circles?: readonly (readonly [cx: number, cy: number, r: number])[];
 }
 
 const ICONS = {
@@ -49,7 +51,12 @@ const ICONS = {
   },
   "bell": { stroke: ["M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9", "M10.3 21a1.94 1.94 0 0 0 3.4 0"] },
   "branches": {
-    stroke: ["M6 3v12", "M18 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", "M6 18a3 3 0 1 0 0 6 3 3 0 0 0 0-6z", "M18 9a9 9 0 0 1-9 9"],
+    stroke: ["M15 6a9 9 0 0 0-9 9V3"],
+    circles: [[18, 6, 3], [6, 18, 3]],
+  },
+  "git-commit": {
+    stroke: ["M3 12h6", "M15 12h6"],
+    circles: [[12, 12, 3]],
   },
   "bug": {
     stroke: [
@@ -92,6 +99,12 @@ const ICONS = {
     stroke: [
       "M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7",
       "M18.38 2.62a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z",
+    ],
+  },
+  "square-pen": {
+    stroke: [
+      "M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7",
+      "M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z",
     ],
   },
   "copy": {
@@ -173,12 +186,10 @@ const ICONS = {
   },
   "fork": {
     stroke: [
-      "M12 18a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
-      "M6 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
-      "M18 6a3 3 0 1 0 0 6 3 3 0 0 0 0-6z",
-      "M18 9v2a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2V9",
+      "M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9",
       "M12 12v3",
     ],
+    circles: [[12, 18, 3], [6, 6, 3], [18, 6, 3]],
   },
   "fullscreen": { stroke: ["M8 3H5a2 2 0 0 0-2 2v3", "M21 8V5a2 2 0 0 0-2-2h-3", "M3 16v3a2 2 0 0 0 2 2h3", "M16 21h3a2 2 0 0 0 2-2v-3"] },
   "fullscreen-exit": { stroke: ["M8 3v3a2 2 0 0 1-2 2H3", "M21 8h-3a2 2 0 0 1-2-2V3", "M3 16h3a2 2 0 0 1 2 2v3", "M16 21v-3a2 2 0 0 1 2-2h3"] },
@@ -217,6 +228,12 @@ const ICONS = {
   "logout": { stroke: ["M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4", "m16 17 5-5-5-5", "M21 12H9"] },
   "menu": { stroke: ["M4 6h16", "M4 12h16", "M4 18h16"] },
   "message": { stroke: ["M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"] },
+  "messages-square": {
+    stroke: [
+      "M16 10a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 14.286V4a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z",
+      "M20 9a2 2 0 0 1 2 2v10.286a.71.71 0 0 1-1.212.502l-2.202-2.202A2 2 0 0 0 17.172 19H10a2 2 0 0 1-2-2v-1",
+    ],
+  },
   "message-plus": { stroke: ["M21 15a4 4 0 0 1-4 4H7l-4 4V7a4 4 0 0 1 4-4h6", "M16 3v6", "M13 6h6"] },
   "messages": {
     stroke: [
@@ -293,6 +310,8 @@ const ICONS = {
       "M10 6v12h4",
     ],
   },
+  "list-check": { stroke: ["m3 6 2 2 4-4", "M12 6h9", "m3 16 2 2 4-4", "M12 16h9"] },
+  "target": { circles: [[12, 12, 9], [12, 12, 5], [12, 12, 1]] },
   "sparkles": {
     stroke: [
       "M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z",
@@ -469,6 +488,9 @@ export function AliIcon({ name, size = "1em", strokeWidth, style, ...props }: Al
     >
       {(def.stroke ?? []).map((d, index) => (
         <path key={`s${index}`} d={d} />
+      ))}
+      {(def.circles ?? []).map(([cx, cy, r], index) => (
+        <circle key={`c${index}`} cx={cx} cy={cy} r={r} />
       ))}
       {(def.fill ?? []).map((d, index) => (
         <path key={`f${index}`} d={d} fill="currentColor" stroke="none" />

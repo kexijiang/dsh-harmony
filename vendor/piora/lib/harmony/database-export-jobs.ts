@@ -43,16 +43,17 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Persisted local jobs; snapshots and SQL stay in process memory and are never written to the journal. */
 export class HarmonyDatabaseExportJobs {
-  /** dsh plugin unload drains exports before closing their SQLite snapshots. */
-  async dispose(): Promise<void> {
-    for (const controller of this.controllers.values()) controller.abort();
-    await this.tail?.catch(() => undefined);
-  }
   private readonly jobs = new Map<string, HarmonyDatabaseExportJob>();
   private readonly controllers = new Map<string, AbortController>();
   private readonly activeDownloads = new Map<string, number>();
   private tail: Promise<void> | null = null;
   private readonly artifactDirectory: string;
+
+  /** dsh plugin unload drains exports before closing their SQLite snapshots. */
+  async dispose(): Promise<void> {
+    for (const controller of this.controllers.values()) controller.abort();
+    await this.tail?.catch(() => undefined);
+  }
 
   constructor(private readonly journalPath: string, private readonly runner: ExportRunner = async (input, signal) =>
     exportHarmonySqliteSnapshot(input.snapshotId, input.table, input.sql, input.format, input.options, signal)) {

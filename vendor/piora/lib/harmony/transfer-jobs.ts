@@ -33,6 +33,12 @@ const MAX_JOBS = 500;
 
 /** A process-owned queue with an atomic local journal; bearer tokens are never persisted. */
 export class HarmonyTransferJobs {
+  private readonly jobs = new Map<string, HarmonyTransferJob>();
+  private readonly controllers = new Map<string, AbortController>();
+  private readonly serialTails = new Map<string, Promise<void>>();
+  private readonly renewalTimers = new Map<string, ReturnType<typeof setInterval>>();
+  private readonly jobLeaseTokens = new Map<string, string>();
+
   /** dsh plugin unload must drain transfers before releasing its device manager. */
   async dispose(): Promise<void> {
     for (const controller of this.controllers.values()) controller.abort();
@@ -41,11 +47,6 @@ export class HarmonyTransferJobs {
     this.renewalTimers.clear();
     for (const id of this.jobLeaseTokens.keys()) this.releaseJobLease(id);
   }
-  private readonly jobs = new Map<string, HarmonyTransferJob>();
-  private readonly controllers = new Map<string, AbortController>();
-  private readonly serialTails = new Map<string, Promise<void>>();
-  private readonly renewalTimers = new Map<string, ReturnType<typeof setInterval>>();
-  private readonly jobLeaseTokens = new Map<string, string>();
 
   private releaseJobLease(id: string): void {
     const token = this.jobLeaseTokens.get(id);

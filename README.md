@@ -2,18 +2,21 @@
 
 将 [Piora](https://github.com/kexijiang/Piora) 的鸿蒙设备工作台与 Agent 操作能力带到 **DSH NEXT 桌面版**。通过 **Better Sidebar** 注册右侧“鸿蒙设备”Tab，同时支持独立悬浮投屏。
 
-当前版本 **0.4.4**：投屏界面和输入处理对齐 Piora 0.5.10-beta.15，界面基线见 [mirror-baseline.json](vendor/mirror-baseline.json)。
+当前版本 **0.5.0**：功能、工作台体验与输入控制对齐 Piora 最新基线（含模块化的 `HarmonyDeviceManager`、日志工作台与内置原生视频库），界面基线见 [mirror-baseline.json](vendor/mirror-baseline.json)。
 
 ## 功能
 
-- 仅展示设备选择、投屏、截图、录屏及操控；旧功能标签、概览和设备信息面板不再显示。
-- 侧栏与独立悬浮窗切换；采用 Piora 的图标控制栏、普通光标和显示选项，移除底部文字输入。
-- 居中设置弹窗支持点击外部和 Escape 关闭，截图/录屏保存目录直接编辑并自动保存。
-- 常驻按下、移动、松开控制与释放保护，音量和电源使用单次按键；保留 Agent 工具接口及资源清理。
+- 顶部紧凑设备栏展示设备选择、连接状态、传输渠道、只读参数响应样本、投屏位置切换、打开投屏、截图、录屏、刷新与居中设置弹窗。
+- 内置双顶层视图：**设备**（侧栏或独立悬浮窗实时投屏，需手动开启“操控手机”后再派发触控/按键）与**日志工作台**（实时日志流与会话日志归档库）。
+- 完整日志工作台支持实时抓取与筛选、本地 ZIP/RAR/GZ/TXT 日志压缩包导入与分块解析、跨文件正则检索、书签收藏与分析草稿一键写入 DSH 对话输入框。
+- 支持多设备独立悬浮投屏窗口（每台设备独立状态与位置记忆 `harmony-mirror-windows.json`）、侧栏与悬浮模式首帧切换保护、桌面剪贴板媒体复制与本地路径定位/打开。
+- 居中设置弹窗包含 HDC/SDK 路径选择与截图/录屏存储目录配置（`HarmonyStorageSettings`）；不再使用旧版 `OHScrcpyServer.hap` 或 DevEco 自动签名流程。
+- 保留完整 `harmony_control` Agent 工具能力与卸载资源清理（投屏子进程、设备控制权、SQLite 快照、传输/导出队列、日志库工作线程）。
 - DSH 使用自己的主题与原生窗口桥接；受 dsh-app 协议限制，在已认证渲染器运行同一视频引擎和 WebCodecs，保持宿主的权限与安全策略。
 - 50ms 操作反馈目标尚未达到，本版不承诺该延迟。
 
 ![设备工具栏](assets/panel-light.png)
+![日志工作台](assets/log-workbench-light.png)
 ![深色主题](assets/panel-dark.png)
 ![设备设置](assets/settings-light.png)
 
@@ -90,16 +93,16 @@ npm run install:dsh
 
 ## 发布
 
-发行包在 GitHub Actions 上构建，并作为 GitHub Release 的附件发布。安装仍使用 Release 里的 `dsh-plugin-harmony.tgz`。把 `package.json` 的 `version` 改为新版本，并在 [CHANGELOG.md](CHANGELOG.md) 增加同名小节，例如 `## 0.4.3 - 2026-11-09`。标签是 `v` 加上该版本。
+发行包在 GitHub Actions 上构建，并作为 GitHub Release 的附件发布。安装仍使用 Release 里的 `dsh-plugin-harmony.tgz`。把 `package.json` 的 `version` 改为新版本，并在 [CHANGELOG.md](CHANGELOG.md) 增加同名小节，例如 `## 0.5.0 - 2026-11-21`。标签是 `v` 加上该版本。
 
 ```powershell
-git tag v0.4.3
-git push origin v0.4.3
+git tag v0.5.0
+git push origin v0.5.0
 ```
 
-推送 `v*` 标签会运行 [`.github/workflows/release.yml`](.github/workflows/release.yml)。它在 `windows-latest` 上执行与 Check 相同的 `npm run check`、`node scripts/check-redesign.mjs` 和 `node scripts/check-inspector.mjs`。通过后用 `npm pack` 生成安装包，附件名为 `dsh-plugin-harmony.tgz`，并附带可用 `sha256sum -c` 核对的 `dsh-plugin-harmony.tgz.sha256`。Release 说明使用 CHANGELOG 里该版本的小节；没有对应小节时使用 GitHub 生成的说明。标签包含 `-alpha`、`-beta` 或 `-rc` 时标记为预发布。
+推送 `v*` 标签会运行 [`.github/workflows/release.yml`](.github/workflows/release.yml)。它在 `windows-latest` 上执行与 Check 相同的 `npm run check`、`node scripts/check-redesign.mjs` 和 `node --test tests/inspector.test.mjs`。通过后用 `npm pack` 生成安装包，附件名为 `dsh-plugin-harmony.tgz`，并附带可用 `sha256sum -c` 核对的 `dsh-plugin-harmony.tgz.sha256`。Release 说明使用 CHANGELOG 里该版本的小节；没有对应小节时使用 GitHub 生成的说明。标签包含 `-alpha`、`-beta` 或 `-rc` 时标记为预发布。
 
-工作流使用仓库自带的 `GITHUB_TOKEN`。远程需要已经有这个标签，且标签版本与 `package.json` 一致，否则工作流失败。需要补跑时，在 Actions 里手动运行 Release，输入已有标签，例如 `v0.4.3`。手动运行会检出该标签；标签上的提交需要包含这条 workflow。
+工作流使用仓库自带的 `GITHUB_TOKEN`。远程需要已经有这个标签，且标签版本与 `package.json` 一致，否则工作流失败。需要补跑时，在 Actions 里手动运行 Release，输入已有标签，例如 `v0.5.0`。手动运行会检出该标签；标签上的提交需要包含这条 workflow。
 
 ## 来源与许可
 

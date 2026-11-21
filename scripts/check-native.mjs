@@ -29,7 +29,7 @@ try {
   assert.equal((await call('setAlwaysOnTop',true)).alwaysOnTop,true);
   await until(s=>s.nativeWindow?.alwaysOnTop===true,'pin');
   const originalHeight=state.nativeWindow.bounds.height;
-  assert.equal((await call('setScale',80)).scale,80);
+  assert.equal((await call('setScale', 50)).scale, 50);
   await until(s=>s.nativeWindow?.bounds.height<originalHeight,'scale');
   await call('setAlwaysOnTop',false);
   await until(s=>s.nativeWindow?.alwaysOnTop===false,'unpin');

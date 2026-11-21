@@ -1,33 +1,153 @@
 :root {
   color-scheme: light;
-  --bg:#ffffff; --bg-panel:#f7f8fa; --bg-hover:#eef0f3; --bg-selected:#eaf0ff;
-  --border:#e3e6eb; --text:#20232a; --text-muted:#626975; --text-dim:#858d99; --accent:#476beb;
-  --accent-hover:#3755c2; --danger:#d33f49; --status-failed:#d33f49; --status-ready:#179667; --status-attention:#b57a19;
-  --font-mono:Consolas,monospace; --font-sans:system-ui,"Microsoft YaHei",sans-serif;
-  --text-xs:11px; --text-sm:13px; --text-md:14px; --text-base:14px; --text-lg:16px;
-  --radius-panel:14px; --radius-control:7px; --control-height:34px; --control-height-compact:30px;
-  --overlay-scrim:rgba(20,24,34,.32); --overlay-blur:2px; --dialog-background:var(--bg);
-  --floating-border:var(--border); --floating-filter:none; --floating-section:var(--bg-panel);
-  --floating-shadow:0 16px 56px rgba(0,0,0,.18); --border-soft:var(--border); --surface-raised:var(--bg-panel);
-  --btn-primary-bg:var(--text); --btn-primary-fg:var(--bg); --btn-primary-bg-hover:var(--text-muted); --focus-ring:var(--accent);
-  font-family:var(--font-sans); background:var(--bg); color:var(--text);
+  --ui-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --font-code-family: "Cascadia Code", "JetBrains Mono", Consolas, monospace;
+  --font-mono: var(--font-code-family);
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-md: 15px;
+  --text-lg: 16px;
+
+  --radius-control: 6px;
+  --radius-panel: 10px;
+  --radius-surface: 14px;
+  --control-height: 30px;
+  --control-height-compact: 26px;
+  --harmony-tree-width: 280px;
+  --library-list-width: 260px;
+  --source-height: 180px;
+  --log-row-height: 22px;
+
+  --bg: #ffffff;
+  --bg-panel: #f7f8fa;
+  --bg-hover: #eef1f5;
+  --bg-selected: #e7f0ff;
+  --surface-raised: #ffffff;
+  --dialog-background: #ffffff;
+  --border: #dcdfe6;
+  --border-soft: rgba(15, 23, 42, 0.08);
+  --border-strong: rgba(15, 23, 42, 0.22);
+
+  --text: #1f2328;
+  --text-muted: #57606a;
+  --text-dim: #737c86;
+  --accent: #0969da;
+
+  --btn-primary-bg: #0969da;
+  --btn-primary-bg-hover: #0550ae;
+  --btn-primary-fg: #ffffff;
+
+  --control-bg: #f6f8fa;
+  --control-border: #d0d7de;
+  --control-fg: #1f2328;
+  --control-field: #ffffff;
+  --control-hover: #eef1f5;
+  --control-focus: rgba(9, 105, 218, 0.28);
+  --focus-ring: 0 0 0 2px rgba(9, 105, 218, 0.28);
+
+  --floating-border: #d0d7de;
+  --floating-section: #f3f5f8;
+  --floating-shadow: 0 12px 32px rgba(15, 23, 42, 0.14);
+  --floating-filter: none;
+  --shadow-popover: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --overlay-blur: blur(8px);
+  --overlay-scrim: rgba(15, 23, 42, 0.42);
+
+  --status-success: #1a7f37;
+  --status-ready: #0969da;
+  --status-attention: #9a6700;
+  --status-failed: #cf222e;
+
+  --log-error: #cf222e;
+  --log-warning: #9a6700;
+  --log-info: #0969da;
+  --log-success: #1a7f37;
+  --log-muted: #737c86;
+  --log-match: rgba(255, 213, 79, 0.42);
+
+  --mirror-bar-bg: rgba(246, 248, 250, 0.94);
+  --mirror-bar-fg: #1f2328;
+  --mirror-bar-hover: #eaeef2;
+  --mirror-bar-focus: rgba(9, 105, 218, 0.35);
+  --mirror-bar-record: #cf222e;
 }
+
 :root[data-theme="dark"] {
-  color-scheme:dark; --bg:#191a1d; --bg-panel:#222428; --bg-hover:#2d3035; --bg-selected:#30394b;
-  --border:#35383e; --text:#ebecef; --text-muted:#a9afb9; --text-dim:#7e8795; --accent:#96b0ff;
-  --accent-hover:#b3c6ff; --danger:#ff858d; --status-failed:#ff858d; --overlay-scrim:rgba(0,0,0,.48);
+  color-scheme: dark;
+  --bg: #17181b;
+  --bg-panel: #202226;
+  --bg-hover: #2b2e34;
+  --bg-selected: #2a374d;
+  --surface-raised: #24262b;
+  --dialog-background: #202226;
+  --border: #343840;
+  --border-soft: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.22);
+
+  --text: #e6e8eb;
+  --text-muted: #9da5b4;
+  --text-dim: #7f8794;
+  --accent: #58a6ff;
+
+  --btn-primary-bg: #1f6feb;
+  --btn-primary-bg-hover: #388bfd;
+  --btn-primary-fg: #ffffff;
+
+  --control-bg: #26292f;
+  --control-border: #3a3f48;
+  --control-fg: #e6e8eb;
+  --control-field: #1b1d22;
+  --control-hover: #31353d;
+  --control-focus: rgba(88, 166, 255, 0.32);
+  --focus-ring: 0 0 0 2px rgba(88, 166, 255, 0.32);
+
+  --floating-border: #383c44;
+  --floating-section: #1e2024;
+  --floating-shadow: 0 14px 36px rgba(0, 0, 0, 0.48);
+  --shadow-popover: 0 10px 28px rgba(0, 0, 0, 0.44);
+  --overlay-scrim: rgba(0, 0, 0, 0.56);
+
+  --status-success: #3fb950;
+  --status-ready: #58a6ff;
+  --status-attention: #d29922;
+  --status-failed: #f85149;
+
+  --log-error: #f85149;
+  --log-warning: #d29922;
+  --log-info: #58a6ff;
+  --log-success: #3fb950;
+  --log-muted: #8b949e;
+  --log-match: rgba(210, 153, 34, 0.35);
+
+  --mirror-bar-bg: rgba(28, 30, 35, 0.94);
+  --mirror-bar-fg: #e6e8eb;
+  --mirror-bar-hover: #31353d;
+  --mirror-bar-focus: rgba(88, 166, 255, 0.4);
+  --mirror-bar-record: #f85149;
 }
-* {box-sizing:border-box} [hidden] {display:none!important}
-body {margin:0;font-size:13px} html,body,#root {height:100%;width:100%}
-#root {display:flex;flex-direction:column;overflow:hidden}
-button,input,select,textarea {font:inherit} button {cursor:pointer} button:disabled {cursor:not-allowed;opacity:.45}
-a {color:var(--accent)} input,select,textarea {color:var(--text);background:var(--bg);border:1px solid var(--border);border-radius:7px}
-button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible {outline:2px solid var(--focus-ring);outline-offset:2px}
-::-webkit-scrollbar {width:7px;height:7px} ::-webkit-scrollbar-thumb {background:color-mix(in srgb,var(--text) 20%,transparent);border-radius:8px}
-.harmony-settings-backdrop {position:fixed;inset:0;z-index:3300;background:var(--overlay-scrim);display:flex;justify-content:flex-end}
-.harmony-settings-sheet {width:min(480px,100%);height:100%;overflow:auto;background:var(--bg);color:var(--text);border-left:1px solid var(--border);box-shadow:-8px 0 40px #0002;outline:none}
-.harmony-settings-sheet :is(input:not([type="checkbox"]),select) {min-height:34px;padding:6px 9px;}
-.harmony-settings-sheet button:not([role="switch"]) {border:1px solid var(--border);border-radius:7px;background:var(--bg);color:var(--text-muted);padding:6px 10px;}
-.harmony-settings-sheet p {font-size:12px;line-height:1.65;}
-.harmony-settings-sheet .settings-embedded-surface {height:auto!important;padding:18px!important;border-top:1px solid var(--border);}
-.harmony-settings-sheet .settings-embedded-surface h2 {font-size:14px!important;}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ui-font-family);
+  font-size: var(--text-base);
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+[hidden] {
+  display: none !important;
+}

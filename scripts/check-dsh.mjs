@@ -12,8 +12,10 @@ try {
   await page.getByRole('button',{name:'打开右侧边栏',exact:true}).click();
   await page.getByRole('button',{name:'鸿蒙设备',exact:true}).click();
   const panel = page.frameLocator('iframe[title="鸿蒙设备"]');
-  await panel.getByRole('tab',{name:'设备信息',exact:true}).click();
-  await panel.getByRole('button',{name:'设备设置',exact:true}).last().click();
+  await panel.getByRole('button', { name: '日志工作台', exact: true }).click();
+  await panel.getByRole('tab', { name: '实时日志', exact: true }).waitFor();
+  await panel.getByRole('button', { name: '设备', exact: true }).click();
+  await panel.getByRole('button', { name: '设备设置', exact: true }).last().click();
   await panel.getByRole('textbox',{name:'HDC 路径',exact:true}).waitFor();
   if (await page.getByRole('dialog',{name:'鸿蒙设备工作台',exact:true}).count()) throw new Error('Unexpected standalone dialog');
   await page.screenshot({path:'.verification/dsh-better-sidebar.png',fullPage:true});

@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import { harness, png } from './harness.mjs';
 import { request } from 'node:http';
 import { DatabaseSync } from 'node:sqlite';
-import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { resolve, join } from 'node:path';
 import { Context } from '@deepseek-ai/cordis';
 
@@ -130,4 +131,54 @@ test('cleanup failure still disposes the device manager and restores environment
   assert.equal(process.env.PIORA_WEB_RUNTIME_ROOT,previous);
   assert.equal(globalThis.__pioraHarmonyTransferJobs,undefined);
   h.server.closeAllConnections(); await new Promise(resolve => h.server.close(resolve));
+});
+
+test('dynamic log-library routing, desktop path boundaries, and log library disposal', async t => {
+  const h = await harness();
+  t.after(() => h.close());
+
+  const missingSession = await fetch(h.origin + '/api/harmony/log-library/capabilities?sessionId=sess-1');
+  assert.equal(missingSession.status, 404);
+
+  const traversal = await fetch(h.origin + '/api/harmony/log-library/capabilities/..?sessionId=sess-1');
+  assert.equal(traversal.status, 400);
+
+  const syncRes = await fetch(h.origin + '/harmony/sessions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      sessions: [{ id: 'sess-1', name: 'Test Session', cwd: process.cwd() }],
+      activeSession: { id: 'sess-1', cwd: process.cwd() },
+    }),
+  });
+  assert.equal(syncRes.status, 200);
+
+  const caps = await fetch(h.origin + '/api/harmony/log-library/capabilities?sessionId=sess-1');
+  assert.equal(caps.status, 200);
+  const capsJson = await caps.json();
+  assert.equal(capsJson.protocolVersion, 2);
+  assert.equal(capsJson.storage, 'session');
+  assert.ok(globalThis.__pioraLogLibrary);
+
+  const outsidePath = join(tmpdir(), 'dsh-outside-secret.txt');
+  await writeFile(outsidePath, 'secret', 'utf8');
+  t.after(() => rm(outsidePath, { force: true }));
+  const badReveal = await fetch(h.origin + '/harmony/desktop', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'revealPath', value: outsidePath }),
+  });
+  assert.equal(badReveal.status, 500);
+
+  const exePath = join(h.dataDir, 'evil.exe');
+  await writeFile(exePath, 'MZ', 'utf8');
+  const badOpen = await fetch(h.origin + '/harmony/desktop', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'openPath', value: exePath }),
+  });
+  assert.equal(badOpen.status, 500);
+
+  await h.close();
+  assert.equal(globalThis.__pioraLogLibrary, undefined);
 });

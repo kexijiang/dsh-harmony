@@ -1,7 +1,7 @@
 {
   "name": "dsh-plugin-harmony",
-  "version": "0.4.4",
-  "description": "DSH NEXT 鸿蒙设备工作台：Better Sidebar Tab、独立悬浮投屏、主题同步与 Agent 设备操作",
+  "version": "0.5.0",
+  "description": "DSH NEXT 鸿蒙设备工作台：Better Sidebar Tab、独立多设备悬浮投屏、日志工作台、主题同步与 Agent 设备操作",
   "repository": {
     "type": "git",
     "url": "https://github.com/kexijiang/dsh-harmony.git"
@@ -66,8 +66,9 @@
     }
   },
   "dependencies": {
+    "7z-bin": "26.6.0",
     "@electron/get": "^3.1.0",
-    "@grpc/grpc-js": "^1.14.0",
+    "@grpc/grpc-js": "1.14.7",
     "@sinclair/typebox": "^0.34.41",
     "@sqlite.org/sqlite-wasm": "3.53.4-build2",
     "ajv": "^8.17.1",
@@ -77,12 +78,13 @@
     "iconv-lite": "^0.7.3",
     "json5": "^2.2.3",
     "jszip": "^3.10.1",
-    "mediabunny": "1.62.1",
+    "mediabunny": "1.65.2",
     "node-pty": "1.1.0",
     "proper-lockfile": "^4.1.2",
     "sharp": "^0.35.5",
-    "typebox": "1.4.3",
-    "ws": "^8.18.0"
+    "typebox": "1.4.7",
+    "ws": "^8.18.0",
+    "yauzl": "3.4.0"
   },
   "devDependencies": {
     "@codemirror/autocomplete": "^6.20.0",

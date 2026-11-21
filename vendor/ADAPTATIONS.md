@@ -1,33 +1,17 @@
-# Piora 快照适配
+# Local Adaptations to Vendored Piora Sources
 
-上游来源见 provenance.json。未改动 F:\Piora。
+All files under `vendor/piora/` are synced from Piora (`vendor/provenance.json`). Only the minimal adaptations below are applied automatically by `scripts/piora-adaptations.mjs` during `scripts/build.mjs --piora <path>`, and all changes are kept idempotent so future syncs remain repeatable:
 
-构建时替换的边界：src/adapters 中的 Pi 工具定义/JSON Schema、PromptRun、文件工作区、NextResponse、动态组件、HTTP 来源鉴别及运行时资源路径。原有设备管理、观察、租约、动作和场景代码保留。
+1. **`lib/harmony/transfer-jobs.ts`**: Added `HarmonyTransferJobs.dispose()` so unloading the Cordis plugin aborts active transfers, waits for serial queue tails, clears renewal intervals, and releases job leases before disposing `HarmonyDeviceManager`.
+2. **`lib/harmony/database-export-jobs.ts`**: Added `HarmonyDatabaseExportJobs.dispose()` so plugin unload aborts active SQLite export jobs and drains pending file-write tails before closing snapshots.
+3. **`lib/harmony/device-files.ts`**: Normalized parsed device paths with `posix.normalize(path)` so root listings return `/data` rather than `//data` while preserving all device metadata.
+4. **`app/api/harmony/tree/route.ts`**: Preserved optional `includeScreenshot=1`, snapshot `quality`, and epoch/dimension-validated screenshot `geometry` fields needed by `tests/inspector.test.mjs` and client inspectors.
+5. **`lib/harmony/manager/media-stream-controller.ts`**: Preserved `refreshPointerFrame()` freshness check (requesting a keyframe and waiting up to 800ms for a frame <= 750ms old before pointer geometry verification) and `sameShape` geometry retention across identical-dimension SPS/PPS configuration callbacks in `openVideoStream()`. Also typed optional `width`/`height` on `frameCapturedAt`.
+6. **`components/workspace/harmony/inspector-model.ts`**: Preserved as a local DSH test/inspector helper file during snapshot pruning.
 
-快照内的局部改动：
-
-- lib/harmony/transfer-jobs.ts：增加 dispose，取消并等待后台传输，释放续租计时器与控制租约。
-- lib/harmony/database-export-jobs.ts：增加 dispose，取消并等待后台导出。
-- components/workspace/HarmonyPanel.tsx：默认进入投屏页，设备信息独立成页；设置改为侧边抽屉；没有原生目录选择桥时隐藏选择按钮；视觉模型说明指向 DSH 当前对话模型。
-- components/workspace/harmony/MirrorWindow.tsx：接入插件提供的原生悬浮窗桥，增加置顶、缩放及停靠按钮；修复标题栏的主题变量。
-- HarmonySettingsSurface.tsx 和面板 CSS：独立、不透明的设置抽屉，随宿主深浅色更新。
-- useTheme 在构建时替换为宿主主题订阅器，不再读取 Piora 的皮肤或主题存储。
-- UiInspector、inspector-model 和 tree API：可选截图与坐标信息，提供快照拾取、树和属性联动。
-- DeviceExplorer 替代文件页入口，使用现有文件 API 展示懒加载树表和操作侧面板；device-files 规范化根目录条目路径。
-- 暂时隐藏应用、数据库、日志、终端、自动化和语音验证入口，保留原有实现和 Agent 工具。
-
-原生窗口及鉴权端点由 src/native-mirror.ts 和 src/native-mirror.cjs 实现。它们不依赖 Piora Electron 主进程，窗口隐藏时停止画面订阅，插件卸载时关闭窗口和本地服务。
-
-重新从上游导入时应保留/重新应用这些适配，并执行完整的定向检查。
-
-## 2026-11-09 投屏同步
-
-基于 Piora a710777f487f69eb2a7e055b4390950f8cebf2e2（beta.15）更新投屏、常驻 DOWN/MOVE/UP 控制、单次物理按键和高位端口分配。保留此前 DSH 的 HarmonyPanel、设置抽屉、tree API、device-files 及传输/数据库任务 dispose 适配。provenance 标识导入基线，快照包含这些局部适配。独立窗口按报告的工具栏高度适配宽高。50ms 操作反馈目标尚未达到；本插件尚无真实手机和最终宿主安装验收。
-
-## 0.4.4 以当前 Piora 为准
-
-上述旧主面板、抽屉和样式适配已撤回；当前页面仅展示投屏/截图/录屏/操控。主面板、设置、悬浮窗和输入 Hook 原文件保持 beta.15 基线，基线散列测试防止再次混入旧布局。构建时仅将 Worker 构造替换为 DSH 渲染器兼容桥：复用同一 MirrorVideoEngine，不放宽 CSP 或认证；原生 codec 仍由 Chromium 执行。控制 Worker 的 IPC 构建适配为 JSON。旧文件树及检查器实现保留，但不再从主界面展示；历史 check-inspector 脚本仅适用于旧 UI，CI 使用 API/模型单元测试以及新的当前界面回归。
-
-### 操控与画面稳定性修复
-
-基线后的四处修复在 mirror-baseline.json 的 patches 中列明，原始上游散列保留：合并未完成的几何准备、未发送触控前的超时可恢复、状态提示不参与布局，以及静止/重复配置画面的新帧验证。实际触控结果不明仍停止，过期帧与旋转校验继续生效。tests/mirror-recovery 与 mirror-freshness 覆盖这些边界。
+Runtime shims replacing Piora web-app host APIs live under `src/adapters/`:
+- `file-access.ts`, `allowed-roots.ts`: Maps workspace roots plus `allowFileRoot()` log-library roots into DSH plugin execution context via `AsyncLocalStorage`.
+- `runtime-home.ts`: Preserves real OS user-home lookup for DevEco/HDC discovery while isolating DSH plugin agent/session/media data under `PIORA_DESKTOP_DATA_DIR` (`%USERPROFILE%\.dsh\harmony`).
+- `session-reader.ts`: Bridges DSH Better Sidebar live sessions and disk session metadata to Piora's session log library (`/harmony/sessions` + `ctx.sessions`).
+- `analytics-telemetry.ts`: No-op stub for `installAnalyticsModelObserver`.
+- `request-security.ts`, `web-auth.ts`, `next-server.ts`, `dynamic.tsx`, `prompt-runs.ts`, `asset-path.ts`, `theme.ts`, `pi-ai.ts`, `pi-sdk.ts`: Host transport, Cordis tool turn fencing, CSP/auth, and DSH theme token adapters.
